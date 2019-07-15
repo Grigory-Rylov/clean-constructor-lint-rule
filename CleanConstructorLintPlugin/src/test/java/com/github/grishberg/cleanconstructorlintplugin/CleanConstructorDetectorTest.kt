@@ -20,6 +20,19 @@ class CleanConstructorDetectorTest {
       }"""
     ).indented()
 
+    private val simpleParentClass = java(
+        """
+      package foo;
+      public class SimpleParent {
+        public SimpleParent() {
+            // empty
+        }
+        public void getDrawable(int id) {}
+        public void getColor(int id) {}
+        public void getColorStateList(int id) {}
+      }"""
+    ).indented()
+
     @Test
     fun constructorHasMethodCalls() {
         lint()
@@ -65,10 +78,13 @@ class CleanConstructorDetectorTest {
                 java(
                     """
           package foo;
-          import android.content.res.Resources;
-          class Example {
+          class Example extends SimpleParent{
             private SomeAnotherClass anotherClass;
             public Example() {
+                super();
+            }
+            public Example() {
+                this();
                 anotherClass.addObserver(new SomeListener());
                 anotherClass.setListener(this);
             }

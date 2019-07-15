@@ -76,7 +76,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
         override fun visitExpressionStatement(statement: PsiExpressionStatement) {
             val expression = statement.expression
             if (expression is PsiMethodCallExpression) {
-                if (!isListenerMethod(expression.methodExpression)) {
+                if (!isAllowedMethod(expression.methodExpression)) {
                     context.report(
                         CleanConstructorsRegistry.ISSUE, clazz,
                         context.getNameLocation(clazz),
@@ -93,7 +93,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
         override fun visitExpressionStatement(statement: PsiExpressionStatement) {
             val expression = statement.expression
             if (expression is PsiMethodCallExpression) {
-                if (!isListenerMethod(expression.methodExpression)) {
+                if (!isAllowedMethod(expression.methodExpression)) {
                     hasExpensiveConstructor = true
                 }
             }
@@ -108,9 +108,11 @@ class CleanConstructorDetector : Detector(), UastScanner {
             "addObserver", "registerObserver"
         )
 
-        private fun isListenerMethod(expression: PsiReferenceExpression): Boolean {
+        private val ACCEPTED_METHODS = listOf("this", "super")
+
+        private fun isAllowedMethod(expression: PsiReferenceExpression): Boolean {
             val methodName = expression.referenceName
-            return LISTENERS_NAME.contains(methodName)
+            return LISTENERS_NAME.contains(methodName) || ACCEPTED_METHODS.contains(methodName)
         }
     }
 }
