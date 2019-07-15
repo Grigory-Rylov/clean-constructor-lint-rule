@@ -75,6 +75,7 @@ class CleanConstructorDetectorTest {
     fun constructorHasRegisterObserverMethodCalls() {
         lint()
             .files(
+                simpleParentClass,
                 java(
                     """
           package foo;
@@ -128,4 +129,33 @@ class CleanConstructorDetectorTest {
             )
     }
 
+
+    @Test
+    fun ignoreWhenParentIsDrawable() {
+        lint()
+            .files(
+                java(
+                    """
+          package foo;
+          import android.graphics.drawable.Drawable;
+          import android.content.res.Resources;
+
+          class Example extends Drawable {
+            private SomeAnotherClass anotherClass;
+            public Example() {
+                foo();
+                anotherClass.slowMethod();
+            }
+
+            public void foo() {
+              Resources resources = null;
+              resources.getDrawable(0);
+            }
+          }"""
+                ).indented()
+            )
+            .issues(CleanConstructorsRegistry.ISSUE)
+            .run()
+            .expect("No warnings.")
+    }
 }

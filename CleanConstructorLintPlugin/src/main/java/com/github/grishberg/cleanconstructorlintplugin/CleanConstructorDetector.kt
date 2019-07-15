@@ -24,12 +24,27 @@ class CleanConstructorDetector : Detector(), UastScanner {
     ) : UElementHandler() {
 
         override fun visitClass(node: UClass) {
+            if (isIgnoredSupertype(node)) {
+                return
+            }
             val visitor = ViewMethodElementsVisitor(context, node)
             for (method in node.allMethods) {
                 if (method.isConstructor) {
                     checkConstructor(method, visitor)
                 }
             }
+        }
+
+        private fun isIgnoredSupertype(node: UClass): Boolean {
+            for (superType in node.uastSuperTypes) {
+                if (superType.getQualifiedName() == "android.graphics.drawable.Drawable") {
+                    return true
+                }
+                if (superType.getQualifiedName() == "android.view.View") {
+                    return true
+                }
+            }
+            return false
         }
 
         private fun checkConstructor(
