@@ -1,0 +1,1 @@
+Lint rule for android projects for searching non clean constructors (Constructors thad do some work inside instead initializing)
