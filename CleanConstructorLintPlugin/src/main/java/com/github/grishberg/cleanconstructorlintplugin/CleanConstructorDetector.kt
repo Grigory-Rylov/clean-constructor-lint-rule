@@ -82,8 +82,8 @@ class CleanConstructorDetector : Detector(), UastScanner {
             if (constructorVisitor.hasExpensiveConstructor()) {
                 context.report(
                     CleanConstructorsRegistry.ISSUE, clazz,
-                    context.getNameLocation(clazz),
-                    "Constructor creates object that has expensive constructor: ${className}"
+                    context.getNameLocation(constructor),
+                    "Constructor creates object that has expensive constructor: $className"
                 )
             }
         }
@@ -94,7 +94,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
                 if (!isAllowedMethod(expression.methodExpression)) {
                     context.report(
                         CleanConstructorsRegistry.ISSUE, clazz,
-                        context.getNameLocation(clazz),
+                        context.getNameLocation(expression.methodExpression),
                         "Constructor has expensive method calls: ${expression.methodExpression.referenceName}"
                     )
                 }

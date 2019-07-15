@@ -20,10 +20,8 @@ class CleanConstructorsRegistry : IssueRegistry() {
 
             // Full explanation of the issue; you can use some markdown markup such as
             // `monospace`, *italic*, and **bold**.
-            "This check highlights string literals in code which mentions " +
-                    "the word `lint`. Blah blah blah.\n" +
-                    "\n" +
-                    "Another paragraph here.\n",
+            "This check highlights non clean constructor. " +
+                    "Constructors must only initiate fields\n",
             Category.PERFORMANCE,
             6,
             Severity.WARNING,

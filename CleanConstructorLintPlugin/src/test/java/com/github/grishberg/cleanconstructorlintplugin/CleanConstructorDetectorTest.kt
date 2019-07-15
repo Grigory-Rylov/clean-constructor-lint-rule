@@ -59,13 +59,13 @@ class CleanConstructorDetectorTest {
             .run()
             .expect(
                 """
-                    src/foo/Example.java:3: Warning: Constructor has expensive method calls: foo [CleanConstructor]
-                    class Example {
-                          ~~~~~~~
-                    src/foo/Example.java:3: Warning: Constructor has expensive method calls: slowMethod [CleanConstructor]
-                    class Example {
-                          ~~~~~~~
-                    0 errors, 2 warnings
+src/foo/Example.java:6: Warning: Constructor has expensive method calls: foo [CleanConstructor]
+      foo();
+      ~~~
+src/foo/Example.java:7: Warning: Constructor has expensive method calls: slowMethod [CleanConstructor]
+      anotherClass.slowMethod();
+                   ~~~~~~~~~~
+0 errors, 2 warnings
                 """
                     .trimMargin()
             )
@@ -118,13 +118,13 @@ class CleanConstructorDetectorTest {
             .run()
             .expect(
                 """
-                src/foo/Example.java:3: Warning: Constructor creates object that has expensive constructor: com.test.ExpensiveConstructor [CleanConstructor]
-                class Example {
-                      ~~~~~~~
-                src/com/test/ExpensiveConstructor.java:2: Warning: Constructor has expensive method calls: getDrawable [CleanConstructor]
-                public class ExpensiveConstructor {
-                             ~~~~~~~~~~~~~~~~~~~~
-                0 errors, 2 warnings
+               src/com/test/ExpensiveConstructor.java:3: Warning: Constructor creates object that has expensive constructor: com.test.ExpensiveConstructor [CleanConstructor]
+  public ExpensiveConstructor() {
+         ~~~~~~~~~~~~~~~~~~~~
+src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive method calls: getDrawable [CleanConstructor]
+          getDrawable(R.drawable.test);
+          ~~~~~~~~~~~
+0 errors, 2 warnings
                 """.trimMargin()
             )
     }
