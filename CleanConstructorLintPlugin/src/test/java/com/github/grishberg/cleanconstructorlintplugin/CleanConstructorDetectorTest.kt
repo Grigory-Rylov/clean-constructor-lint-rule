@@ -98,8 +98,6 @@ src/foo/Example.java:7: Warning: Constructor has expensive method calls: slowMet
             .expect("No warnings.")
     }
 
-    /*
-    TODO: fix case with expensive constructor call
     @Test
     fun createObjectWithExpensiveConstructor() {
         lint()
@@ -121,9 +119,9 @@ src/foo/Example.java:7: Warning: Constructor has expensive method calls: slowMet
             .run()
             .expect(
                 """
-               src/com/test/ExpensiveConstructor.java:3: Warning: Constructor creates object that has expensive constructor: com.test.ExpensiveConstructor [CleanConstructor]
-  public ExpensiveConstructor() {
-         ~~~~~~~~~~~~~~~~~~~~
+src/foo/Example.java:6: Warning: Constructor creates object that has expensive constructor: Example [CleanConstructor]
+      ExpensiveConstructor val = new ExpensiveConstructor();
+                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive method calls: getDrawable [CleanConstructor]
           getDrawable(R.drawable.test);
           ~~~~~~~~~~~
@@ -131,7 +129,6 @@ src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive met
                 """.trimMargin()
             )
     }
-*/
 
     @Test
     fun ignoreWhenParentIsDrawable() {
@@ -189,6 +186,38 @@ src/foo/Example.kt:5: Warning: Constructor has expensive method calls: foo [Clea
       foo()
       ~~~
 0 errors, 1 warnings
+                """
+                    .trimMargin()
+            )
+    }
+
+    @Test
+    fun kotlinConstructorHasExpensiveConstructorCall() {
+        lint()
+            .files(
+                expensiveConstructorClass,
+                kotlin(
+                    """
+          package com.test
+          class Example {
+            private val field : ExpensiveConstructor
+            init {
+                field = ExpensiveConstructor()
+            }
+          }"""
+                ).indented()
+            )
+            .issues(CleanConstructorsRegistry.ISSUE)
+            .run()
+            .expect(
+                """
+src/com/test/Example.kt:5: Warning: Constructor creates object that has expensive constructor: Example [CleanConstructor]
+      field = ExpensiveConstructor()
+              ~~~~~~~~~~~~~~~~~~~~
+src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive method calls: getDrawable [CleanConstructor]
+          getDrawable(R.drawable.test);
+          ~~~~~~~~~~~
+0 errors, 2 warnings
                 """
                     .trimMargin()
             )
