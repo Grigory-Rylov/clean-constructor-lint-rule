@@ -222,4 +222,40 @@ src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive met
                     .trimMargin()
             )
     }
+
+
+    @Test
+    fun warningWhenInjectedExpensiveConstructor() {
+        lint()
+            .files(
+                expensiveConstructorClass,
+                java(
+                    """
+          package foo;
+          import com.test.ExpensiveConstructor;
+          import javax.inject.Inject;
+          class Example extends SimpleParent{
+            private ExpensiveConstructor anotherClass;
+            @Inject
+            public Example(ExpensiveConstructor c) {
+                anotherClass = c;
+            }
+          }"""
+                ).indented()
+            )
+            .issues(CleanConstructorsRegistry.ISSUE)
+            .run()
+            .expect(
+                """
+src/foo/Example.java:7: Warning: Constructor with @Inject annotation injected object that has expensive constructor: com.test.ExpensiveConstructor [CleanConstructor]
+  public Example(ExpensiveConstructor c) {
+                                      ~
+src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive method calls: getDrawable [CleanConstructor]
+          getDrawable(R.drawable.test);
+          ~~~~~~~~~~~
+0 errors, 2 warnings
+                """
+                    .trimMargin()
+            )
+    }
 }

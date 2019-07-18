@@ -61,7 +61,61 @@ class CleanConstructorDetector : Detector(), UastScanner {
             if (node.parent is PsiClass && isIgnoredSupertype(node.parent as PsiClass)) {
                 return
             }
-            node.accept(ConstructorsMethodsVisitor(context, node.parent))
+            checkConstructor(node)
+        }
+
+        private fun checkConstructor(constructorMethod: UMethod) {
+            constructorMethod.accept(ConstructorsMethodsVisitor(context, constructorMethod.parent))
+
+            if (hasInjectAnnotation(constructorMethod.getAnnotations())) {
+                checkConstructorParametersHasExpensiveConstructor(constructorMethod, shouldReport = true)
+            }
+        }
+
+        private fun checkConstructorParametersHasExpensiveConstructor(
+            constructor: UMethod,
+            shouldReport: Boolean = false
+        ): Boolean {
+            for (param in constructor.uastParameters) {
+                val cn = param.typeReference?.getQualifiedName()
+                if (cn != null) {
+                    val clazz = context.evaluator.findClass(cn)
+                    val constructorVisitor = ReferenceConstructorChecker()
+                    if (clazz == null) {
+                        continue
+                    }
+                    clazz.accept(constructorVisitor)
+                    if (constructorVisitor.hasExpensiveConstructor()) {
+                        if (shouldReport) {
+                            context.report(
+                                CleanConstructorsRegistry.ISSUE, constructor,
+                                context.getNameLocation(param),
+                                "Constructor with @Inject annotation injected object that has expensive constructor: $cn"
+                            )
+                        }
+                        return true
+                    }
+                    /*
+                    //TODO: walk each parameters constructor.
+                    for (c in clazz.constructors) {
+                        if (hasInjectAnnotation(c.annotations)) {
+                            checkConstructorParametersHasExpensiveConstructor(constructorMethod)
+                        }
+                    }
+                    */
+                }
+            }
+            return false
+        }
+
+        private fun hasInjectAnnotation(annotations: Array<out PsiAnnotation>): Boolean {
+            for (a in annotations) {
+                val nameReferenceElement = a.nameReferenceElement
+                if (nameReferenceElement != null && nameReferenceElement.qualifiedName == "Inject") {
+                    return true
+                }
+            }
+            return false
         }
 
         private fun isIgnoredSupertype(node: PsiClass): Boolean {
@@ -118,6 +172,9 @@ class CleanConstructorDetector : Detector(), UastScanner {
         }
     }
 
+    /**
+     * Visit method calls inside current method.
+     */
     private class ReferenceConstructorChecker : JavaRecursiveElementVisitor() {
         private var hasExpensiveConstructor = false
 
