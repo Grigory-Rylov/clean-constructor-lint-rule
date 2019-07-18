@@ -79,11 +79,8 @@ class CleanConstructorDetector : Detector(), UastScanner {
             for (param in constructor.uastParameters) {
                 val cn = param.typeReference?.getQualifiedName()
                 if (cn != null) {
-                    val clazz = context.evaluator.findClass(cn)
+                    val clazz = context.evaluator.findClass(cn) ?: continue
                     val constructorVisitor = ReferenceConstructorChecker()
-                    if (clazz == null) {
-                        continue
-                    }
                     clazz.accept(constructorVisitor)
                     if (constructorVisitor.hasExpensiveConstructor()) {
                         if (shouldReport) {
@@ -95,14 +92,44 @@ class CleanConstructorDetector : Detector(), UastScanner {
                         }
                         return true
                     }
-                    /*
-                    //TODO: walk each parameters constructor.
+
                     for (c in clazz.constructors) {
                         if (hasInjectAnnotation(c.annotations)) {
-                            checkConstructorParametersHasExpensiveConstructor(constructorMethod)
+                            if (checkConstructorParametersHasExpensiveConstructor(c)) {
+                                if (shouldReport) {
+                                    context.report(
+                                        CleanConstructorsRegistry.ISSUE, constructor,
+                                        context.getNameLocation(constructor),
+                                        "Constructor with @Inject annotation injected object that has expensive constructor: ${c.name}"
+                                    )
+                                }
+                                return true
+                            }
                         }
                     }
-                    */
+
+                }
+            }
+            return false
+        }
+
+        private fun checkConstructorParametersHasExpensiveConstructor(constructor: PsiMethod): Boolean {
+            for (param in constructor.parameters) {
+                val type: PsiType = (param as PsiParameter).type
+                val cn = type.canonicalText
+                val clazz = context.evaluator.findClass(cn) ?: continue
+                val constructorVisitor = ReferenceConstructorChecker()
+                clazz.accept(constructorVisitor)
+                if (constructorVisitor.hasExpensiveConstructor()) {
+                    return true
+                }
+
+                for (c in clazz.constructors) {
+                    if (hasInjectAnnotation(c.annotations)) {
+                        if (checkConstructorParametersHasExpensiveConstructor(c)) {
+                            return true
+                        }
+                    }
                 }
             }
             return false
@@ -223,6 +250,10 @@ class CleanConstructorDetector : Detector(), UastScanner {
         }
     }
 
+    class ParamTypeVisitor {
+
+    }
+
     companion object {
         private val ACCEPTED_METHODS = listOf("this", "super")
 
@@ -271,4 +302,6 @@ class CleanConstructorDetector : Detector(), UastScanner {
         }
     }
 }
+
+
 
