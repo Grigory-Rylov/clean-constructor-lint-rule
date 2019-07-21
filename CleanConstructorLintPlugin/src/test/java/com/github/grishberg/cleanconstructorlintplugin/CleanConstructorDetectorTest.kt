@@ -258,4 +258,60 @@ src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive met
                     .trimMargin()
             )
     }
+
+
+    @Test
+    fun constructorAnonymousClass() {
+        lint()
+            .files(
+                java(
+                    """
+          package foo;
+          import foo.some.SomeListener;
+          class Example {
+            private View.OnClickListener listener;
+            public Example() {
+                listener = new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        foo();
+                    }
+                };
+            }
+            private void foo() {
+                Thread.sleep(1000);
+            }
+          }"""
+                ).indented()
+            )
+            .issues(CleanConstructorsRegistry.ISSUE)
+            .run()
+            .expect("No warnings.")
+    }
+
+
+    @Test
+    fun allowAddToListAndPutToMapInsideConstructor() {
+        lint()
+            .files(
+                java(
+                    """
+            package com.test;
+            import java.util.ArrayList;
+            import java.util.HashMap;
+            import java.util.List;
+            import java.util.Map;
+            class Example {
+                public Example(List list, Map map) {
+                    map.put("1", 0);
+                    list.add("1");
+                }
+            }
+            """
+                ).indented()
+            )
+            .issues(CleanConstructorsRegistry.ISSUE)
+            .run()
+            .expect("No warnings.")
+    }
 }

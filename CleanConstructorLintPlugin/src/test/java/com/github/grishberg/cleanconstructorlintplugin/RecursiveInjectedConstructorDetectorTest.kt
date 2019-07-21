@@ -6,7 +6,7 @@ import com.android.tools.lint.checks.infrastructure.TestFiles.kotlin
 import com.android.tools.lint.checks.infrastructure.TestLintTask.lint
 import org.junit.Test
 
-class CleanConstructorDetectorTest2 {
+class RecursiveInjectedConstructorDetectorTest {
     private val expensiveConstructorClass = java(
         """
       package com.test;

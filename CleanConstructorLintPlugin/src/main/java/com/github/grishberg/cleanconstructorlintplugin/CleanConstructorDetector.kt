@@ -5,10 +5,9 @@ import com.android.tools.lint.detector.api.Detector
 import com.android.tools.lint.detector.api.Detector.UastScanner
 import com.android.tools.lint.detector.api.JavaContext
 import com.intellij.psi.*
-import com.intellij.psi.impl.compiled.ClsClassImpl
-import com.intellij.psi.impl.source.tree.java.PsiNewExpressionImpl
 import org.jetbrains.uast.*
 import org.jetbrains.uast.util.isConstructorCall
+import org.jetbrains.uast.util.isMethodCall
 import org.jetbrains.uast.visitor.AbstractUastVisitor
 
 
@@ -16,10 +15,12 @@ import org.jetbrains.uast.visitor.AbstractUastVisitor
  * Detects heavy constructors.
  */
 class CleanConstructorDetector : Detector(), UastScanner {
+    override fun getApplicableUastTypes() =
+        listOf<Class<out UElement>>(UCallExpression::class.java, UMethod::class.java)
 
-    override fun getApplicableUastTypes() = listOf(UCallExpression::class.java, UMethod::class.java)
-
-    override fun createUastHandler(context: JavaContext) = NamingPatternHandler(context)
+    override fun createUastHandler(context: JavaContext): UElementHandler {
+        return NamingPatternHandler(context)
+    }
 
     class NamingPatternHandler(
         private val context: JavaContext
@@ -33,16 +34,19 @@ class CleanConstructorDetector : Detector(), UastScanner {
 
             val classReference = call.classReference
             if (classReference != null && callerClass != null) {
-                val resolved = classReference.resolve()
-                if ((resolved is PsiClass)) {
-                    for (constructor in resolved.constructors) {
-                        checkReferenceConstructors(callerClass, constructor, call)
+                val resolved = classReference.resolveToUElement()
+                if ((resolved is UClass)) {
+                    for (method in resolved.methods) {
+                        if (!method.isConstructor) {
+                            continue
+                        }
+                        checkReferenceConstructors(callerClass, method, call)
                     }
                 }
             }
         }
 
-        private fun checkReferenceConstructors(callerClass: UClass, constructor: PsiMethod, call: UCallExpression) {
+        private fun checkReferenceConstructors(callerClass: UClass, constructor: UMethod, call: UCallExpression) {
             val constructorVisitor = ReferenceConstructorChecker()
             constructor.accept(constructorVisitor)
             if (constructorVisitor.hasExpensiveConstructor()) {
@@ -58,15 +62,14 @@ class CleanConstructorDetector : Detector(), UastScanner {
             if (!node.isConstructor) {
                 return
             }
-            if (node.parent is PsiClass && isIgnoredSupertype(node.parent as PsiClass)) {
+            if (node.uastParent is UClass && isIgnoredSupertype(node.uastParent as UClass)) {
                 return
             }
             checkConstructor(node)
         }
 
         private fun checkConstructor(constructorMethod: UMethod) {
-            constructorMethod.accept(ConstructorsMethodsVisitor(context, constructorMethod.parent))
-
+            constructorMethod.accept(ConstructorsMethodsVisitor(context, constructorMethod.uastParent!!))
             if (hasInjectAnnotation(constructorMethod.getAnnotations())) {
                 checkConstructorParametersHasExpensiveConstructor(constructorMethod, shouldReport = true)
             }
@@ -145,57 +148,13 @@ class CleanConstructorDetector : Detector(), UastScanner {
             return false
         }
 
-        private fun isIgnoredSupertype(node: PsiClass): Boolean {
-            for (superType in node.supers) {
-                if (superType is ClsClassImpl) {
-                    if (IGNORED_PARENTS.contains(superType.stub.qualifiedName)) {
-                        return true
-                    }
+        private fun isIgnoredSupertype(node: UClass): Boolean {
+            for (superType in node.uastSuperTypes) {
+                if (IGNORED_PARENTS.contains(superType.getQualifiedName())) {
+                    return true
                 }
             }
             return false
-        }
-    }
-
-    private class ViewMethodElementsVisitor(
-        private val context: JavaContext,
-        private val clazz: UClass
-    ) : JavaRecursiveElementVisitor() {
-
-        override fun visitReferenceElement(reference: PsiJavaCodeReferenceElement) {
-            if (reference.parent !is PsiNewExpressionImpl) return
-            val className = reference.qualifiedName
-            val resolved = reference.resolve()
-            if ((resolved is PsiClass)) {
-                for (constructor in resolved.constructors) {
-                    checkReferenceConstructors(className, constructor)
-                }
-            }
-        }
-
-        private fun checkReferenceConstructors(className: String, constructor: PsiMethod) {
-            val constructorVisitor = ReferenceConstructorChecker()
-            constructor.accept(constructorVisitor)
-            if (constructorVisitor.hasExpensiveConstructor()) {
-                context.report(
-                    CleanConstructorsRegistry.ISSUE, clazz,
-                    context.getNameLocation(constructor),
-                    "Constructor creates object that has expensive constructor: $className"
-                )
-            }
-        }
-
-        override fun visitExpressionStatement(statement: PsiExpressionStatement) {
-            val expression = statement.expression
-            if (expression is PsiMethodCallExpression) {
-                if (!isAllowedMethod(expression.methodExpression)) {
-                    context.report(
-                        CleanConstructorsRegistry.ISSUE, clazz,
-                        context.getNameLocation(expression.methodExpression),
-                        "Constructor has expensive method calls: ${expression.methodExpression.referenceName}"
-                    )
-                }
-            }
         }
     }
 
@@ -204,6 +163,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
      */
     private class ReferenceConstructorChecker : JavaRecursiveElementVisitor() {
         private var hasExpensiveConstructor = false
+
 
         override fun visitExpressionStatement(statement: PsiExpressionStatement) {
             val expression = statement.expression
@@ -219,13 +179,32 @@ class CleanConstructorDetector : Detector(), UastScanner {
 
     class ConstructorsMethodsVisitor(
         private val context: JavaContext,
-        private val parent: PsiElement
+        private val parent: UElement
     ) : AbstractUastVisitor() {
+
         override fun visitCallExpression(node: UCallExpression): Boolean {
+            if (isCallInAnonymousClass(node)) {
+                return false
+            }
+            if (ExcludedClasses.isExcludedClassInExpression(node)) {
+                return false
+            }
+
+            if (node.isMethodCall()) {
+                val methodName = node.methodName
+                if (methodName != null && !isAllowedIdentifier(methodName)) {
+                    context.report(
+                        CleanConstructorsRegistry.ISSUE, parent,
+                        context.getNameLocation(node),
+                        "Constructor has expensive method calls: $methodName"
+                    )
+                }
+                return false
+            }
             val identifier = node.methodIdentifier
 
             identifier?.uastParent?.let {
-                val method = it.tryResolve() as? PsiMethod
+                val method = it.tryResolve() as? UMethod
                 if (method != null) {
                     if (!method.isConstructor && !isAllowedMethod(method)) {
                         context.report(
@@ -234,24 +213,21 @@ class CleanConstructorDetector : Detector(), UastScanner {
                             "Constructor has expensive method calls: ${method.name}"
                         )
                     }
-                } else {
-                    if (!isAllowedMethod(node)) {
-                        context.report(
-                            CleanConstructorsRegistry.ISSUE, parent,
-                            context.getNameLocation(node),
-                            "Constructor has expensive method calls: ${identifier.name}"
-                        )
-                    }
                 }
+            }
+            return true
+        }
 
-
+        private fun isCallInAnonymousClass(node: UCallExpression): Boolean {
+            var parent: UElement? = node.uastParent
+            while (parent != null) {
+                if (parent is UClass && parent.name == null) {
+                    return true
+                }
+                parent = parent.uastParent
             }
             return false
         }
-    }
-
-    class ParamTypeVisitor {
-
     }
 
     companion object {
@@ -273,20 +249,19 @@ class CleanConstructorDetector : Detector(), UastScanner {
             "unregister\\w*Observer".toRegex()
         )
 
+        private fun isAllowedMethod(expression: UReferenceExpression): Boolean {
+            val methodName = expression.resolvedName ?: return false
+            return isAllowedIdentifier(methodName)
+        }
+
         private fun isAllowedMethod(expression: PsiReferenceExpression): Boolean {
             val methodName = expression.referenceName ?: return false
             return isAllowedIdentifier(methodName)
         }
 
-        private fun isAllowedMethod(expression: PsiMethod): Boolean {
+        private fun isAllowedMethod(expression: UMethod): Boolean {
             val methodName = expression.name
             return isAllowedIdentifier(methodName)
-        }
-
-        private fun isAllowedMethod(expression: UCallExpression): Boolean {
-            val methodIdentifier = expression.methodIdentifier ?: return false
-            val elementName = methodIdentifier.name
-            return isAllowedIdentifier(elementName)
         }
 
         private fun isAllowedIdentifier(elementName: String): Boolean {

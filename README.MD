@@ -2,5 +2,5 @@ Lint rule for android projects for searching non clean constructors (Constructor
 
 Add next code to dependencies block in build.gradle
 ```
-lintChecks 'com.github.grishberg:clean-constructor-lint-rule:1.0.0'
+lintChecks 'com.github.grishberg:clean-constructor-lint-rule:1.1.0'
 ```
