@@ -1,11 +1,16 @@
 package com.github.grishberg.myapplication;
 
-import android.content.Context;
+import javax.inject.Inject;
 
 public class TestJavaClass {
     private ExpensiveJavaClass listener;
 
-    public TestJavaClass(Context context) {
-        listener = new ExpensiveJavaClass(context);
+    @Inject
+    public TestJavaClass(ExpensiveJavaClass expensiveConstructorsArgument) {
+        listener = expensiveConstructorsArgument;
+    }
+
+    public void x() {
+        listener.expensiveMethod();
     }
 }

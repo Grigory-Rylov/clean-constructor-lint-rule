@@ -1,9 +1,11 @@
 package com.github.grishberg.myapplication
 
-class TestedClass {
-    val someRef = ExpensiveClass()
+import javax.inject.Inject
 
-    private fun doSomeExpensiveThing() {
+class TestedClass @Inject constructor(private val expensiveField: ExpensiveClass) {
+
+    fun doSomeExpensiveThing() {
         Thread.sleep(1000)
+        expensiveField.doSomeExpensiveThing()
     }
 }

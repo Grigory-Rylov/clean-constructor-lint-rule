@@ -27,7 +27,7 @@ public class ExpensiveJavaClass {
         };
     }
 
-    private void expensiveMethod() {
+    public void expensiveMethod() {
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {

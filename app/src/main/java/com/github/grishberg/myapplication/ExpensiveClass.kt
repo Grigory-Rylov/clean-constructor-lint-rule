@@ -9,7 +9,7 @@ class ExpensiveClass {
         doSomeExpensiveThing()
     }
 
-    private fun doSomeExpensiveThing() {
+    fun doSomeExpensiveThing() {
         Thread.sleep(1000)
     }
 
