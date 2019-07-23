@@ -15,7 +15,7 @@ import org.jetbrains.uast.visitor.AbstractUastVisitor
  * Detects heavy constructors.
  */
 class CleanConstructorDetector : Detector(), UastScanner {
-    private val expensiveClasses = mutableSetOf<String>()
+    private val expensiveClasses = ExpensiveConstructorsRepository()
     override fun getApplicableUastTypes() =
         listOf<Class<out UElement>>(UCallExpression::class.java, UMethod::class.java)
 
@@ -25,7 +25,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
 
     class NamingPatternHandler(
         private val context: JavaContext,
-        private val expensiveClasses: MutableSet<String>
+        private val expensiveClasses: ExpensiveConstructorsRepository
     ) : UElementHandler() {
 
         override fun visitCallExpression(call: UCallExpression) {
@@ -95,19 +95,22 @@ class CleanConstructorDetector : Detector(), UastScanner {
         ): Boolean {
             for (param in constructor.uastParameters) {
                 val injectedClassName: String = param.typeReference?.getQualifiedName() ?: continue
-                //if (expensiveClasses.contains(injectedClassName)) {
-                //    if (shouldReport) {
-                //        reportExpensiveInjectedParameter(constructor, param, diGraph)
-                //    }
-                //    return true
-                //}
+                /*
+                if (expensiveClasses.contains(injectedClassName)) {
+                    diGraph.addGraph(expensiveClasses.getGraphByName(injectedClassName))
+                    if (shouldReport) {
+                        reportExpensiveInjectedParameter(constructor, param, diGraph)
+                    }
+                    return true
+                }
+                */
                 val clazz = context.evaluator.findClass(injectedClassName) ?: continue
                 val uClass = context.uastContext.getClass(clazz)
                 val constructorVisitor = ReferenceConstructorChecker()
                 uClass.accept(constructorVisitor)
                 if (constructorVisitor.hasExpensiveConstructor()) {
                     diGraph.addElement(injectedClassName)
-                    expensiveClasses.add(injectedClassName)
+                    expensiveClasses.add(injectedClassName, diGraph)
                     if (shouldReport) {
                         reportExpensiveInjectedParameter(constructor, param, diGraph)
                     }
