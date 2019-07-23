@@ -73,7 +73,8 @@ class CleanConstructorDetector : Detector(), UastScanner {
         private fun checkConstructor(constructorMethod: UMethod) {
             constructorMethod.accept(ConstructorsMethodsVisitor(context, constructorMethod.uastParent!!))
             if (hasInjectAnnotation(constructorMethod.annotations)) {
-                checkArgsHasExpensiveConstructor(constructorMethod, shouldReport = true)
+                val diGraph = DependencyGraph(constructorMethod.name)
+                checkArgsHasExpensiveConstructor(constructorMethod, diGraph, shouldReport = true)
             }
         }
 
@@ -89,24 +90,26 @@ class CleanConstructorDetector : Detector(), UastScanner {
 
         private fun checkArgsHasExpensiveConstructor(
             constructor: UMethod,
+            diGraph: DependencyGraph,
             shouldReport: Boolean = false
         ): Boolean {
             for (param in constructor.uastParameters) {
-                val cn: String = param.typeReference?.getQualifiedName() ?: continue
-                if (expensiveClasses.contains(cn)) {
-                    if (shouldReport) {
-                        reportExpensiveInjectedParameter(constructor, param, cn)
-                    }
-                    return true
-                }
-                val clazz = context.evaluator.findClass(cn) ?: continue
+                val injectedClassName: String = param.typeReference?.getQualifiedName() ?: continue
+                //if (expensiveClasses.contains(injectedClassName)) {
+                //    if (shouldReport) {
+                //        reportExpensiveInjectedParameter(constructor, param, diGraph)
+                //    }
+                //    return true
+                //}
+                val clazz = context.evaluator.findClass(injectedClassName) ?: continue
                 val uClass = context.uastContext.getClass(clazz)
                 val constructorVisitor = ReferenceConstructorChecker()
                 uClass.accept(constructorVisitor)
                 if (constructorVisitor.hasExpensiveConstructor()) {
-                    expensiveClasses.add(cn)
+                    diGraph.addElement(injectedClassName)
+                    expensiveClasses.add(injectedClassName)
                     if (shouldReport) {
-                        reportExpensiveInjectedParameter(constructor, param, cn)
+                        reportExpensiveInjectedParameter(constructor, param, diGraph)
                     }
                     return true
                 }
@@ -116,12 +119,14 @@ class CleanConstructorDetector : Detector(), UastScanner {
                         continue
                     }
                     if (hasInjectAnnotation(c.annotations)) {
-                        if (checkArgsHasExpensiveConstructor(c)) {
+                        val subclassGraph = DependencyGraph(injectedClassName)
+                        if (checkArgsHasExpensiveConstructor(c, subclassGraph)) {
+                            diGraph.addGraph(subclassGraph)
                             if (shouldReport) {
                                 context.report(
                                     CleanConstructorsRegistry.INJECT_ISSUE, constructor,
-                                    context.getNameLocation(constructor),
-                                    "Constructor with @Inject annotation injected object that has expensive constructor: ${c.name}"
+                                    context.getNameLocation(param),
+                                    "Constructor with @Inject annotation injected object that has expensive constructor: $diGraph"
                                 )
                             }
                             return true
@@ -135,12 +140,12 @@ class CleanConstructorDetector : Detector(), UastScanner {
         private fun reportExpensiveInjectedParameter(
             constructor: UMethod,
             param: UParameter,
-            cn: String?
+            diGraph: DependencyGraph
         ) {
             context.report(
                 CleanConstructorsRegistry.INJECT_ISSUE, constructor,
                 context.getNameLocation(param),
-                "Constructor with @Inject annotation injected object that has expensive constructor: $cn"
+                "Constructor with @Inject annotation injected object that has expensive constructor: $diGraph"
             )
         }
 

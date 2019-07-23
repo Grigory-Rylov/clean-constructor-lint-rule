@@ -8,6 +8,9 @@ class CleanConstructorsRegistry : IssueRegistry() {
     override val issues: List<Issue>
         get() = listOf(ISSUE)
 
+    override val api: Int
+        get() = CURRENT_API
+
     companion object {
         /** Issue describing the problem and pointing to the detector implementation  */
         val ISSUE = Issue.create(
@@ -37,7 +40,7 @@ class CleanConstructorsRegistry : IssueRegistry() {
 
             // Title -- shown in the IDE's preference dialog, as category headers in the
             // Analysis results window, etc
-            "Lint clean constructors",
+            "Lint Injected constructors",
 
             // Full explanation of the issue; you can use some markdown markup such as
             // `monospace`, *italic*, and **bold**.

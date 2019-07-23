@@ -71,9 +71,9 @@ class RecursiveInjectedConstructorDetectorTest {
 src/com/test/InjectedConstructor.java:5: Warning: Constructor with @Inject annotation injected object that has expensive constructor: com.test.ExpensiveConstructor [CleanConstructor]
   public InjectedConstructor(ExpensiveConstructor c) { }
                                                   ~
-src/com/test/TestedClass.java:5: Warning: Constructor with @Inject annotation injected object that has expensive constructor: InjectedConstructor [CleanConstructor]
+src/com/test/TestedClass.java:5: Warning: Constructor with @Inject annotation injected object that has expensive constructor: com.test.InjectedConstructor -> com.test.ExpensiveConstructor [CleanConstructor]
   public TestedClass(InjectedConstructor ic) { }
-         ~~~~~~~~~~~
+                                         ~~
 src/com/test/ExpensiveConstructor.java:4: Warning: Constructor has expensive method calls: foo [CleanConstructor]
       foo();
       ~~~
