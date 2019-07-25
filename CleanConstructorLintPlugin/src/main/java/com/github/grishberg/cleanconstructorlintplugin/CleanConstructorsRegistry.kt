@@ -15,15 +15,15 @@ class CleanConstructorsRegistry : IssueRegistry() {
         /** Issue describing the problem and pointing to the detector implementation  */
         val ISSUE = Issue.create(
             // ID: used in @SuppressLint warnings etc
-            "CleanConstructor",
+            "ExpensiveConstructor",
 
             // Title -- shown in the IDE's preference dialog, as category headers in the
             // Analysis results window, etc
-            "Lint clean constructors",
+            "Expensive constructors",
 
             // Full explanation of the issue; you can use some markdown markup such as
             // `monospace`, *italic*, and **bold**.
-            "This check highlights non clean constructor. " +
+            "This check highlights expensive constructor. " +
                     "Constructors must only initiate fields\n",
             Category.PERFORMANCE,
             8,
@@ -36,16 +36,16 @@ class CleanConstructorsRegistry : IssueRegistry() {
 
         val INJECT_ISSUE = Issue.create(
             // ID: used in @SuppressLint warnings etc
-            "CleanConstructor",
+            "InjectedExpensiveConstructor",
 
             // Title -- shown in the IDE's preference dialog, as category headers in the
             // Analysis results window, etc
-            "Lint Injected constructors",
+            "Injected expensive constructors",
 
             // Full explanation of the issue; you can use some markdown markup such as
             // `monospace`, *italic*, and **bold**.
-            "This check highlights injecting non clean constructor. " +
-                    "Need to use Lazy<> wrapper for this cases.",
+            "This check highlights injecting expensive constructor. " +
+                    "Need to use Lazy wrapper for this cases.",
             Category.PERFORMANCE,
             9,
             Severity.WARNING,

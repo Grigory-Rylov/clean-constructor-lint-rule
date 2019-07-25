@@ -60,10 +60,10 @@ class CleanConstructorDetectorTest {
             .run()
             .expect(
                 """
-src/foo/Example.java:6: Warning: Constructor has expensive method calls: foo [CleanConstructor]
+src/foo/Example.java:6: Warning: Constructor has expensive method calls: foo [ExpensiveConstructor]
       foo();
       ~~~
-src/foo/Example.java:7: Warning: Constructor has expensive method calls: slowMethod [CleanConstructor]
+src/foo/Example.java:7: Warning: Constructor has expensive method calls: slowMethod [ExpensiveConstructor]
       anotherClass.slowMethod();
                    ~~~~~~~~~~
 0 errors, 2 warnings
@@ -119,10 +119,10 @@ src/foo/Example.java:7: Warning: Constructor has expensive method calls: slowMet
             .run()
             .expect(
                 """
-src/foo/Example.java:6: Warning: Constructor creates object that has expensive constructor: Example [CleanConstructor]
+src/foo/Example.java:6: Warning: Constructor creates object that has expensive constructor: Example [ExpensiveConstructor]
       ExpensiveConstructor val = new ExpensiveConstructor();
                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~
-src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive method calls: getDrawable [CleanConstructor]
+src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive method calls: getDrawable [ExpensiveConstructor]
           getDrawable(R.drawable.test);
           ~~~~~~~~~~~
 0 errors, 2 warnings
@@ -182,7 +182,7 @@ src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive met
             .run()
             .expect(
                 """
-src/foo/Example.kt:5: Warning: Constructor has expensive method calls: foo [CleanConstructor]
+src/foo/Example.kt:5: Warning: Constructor has expensive method calls: foo [ExpensiveConstructor]
       foo()
       ~~~
 0 errors, 1 warnings
@@ -211,10 +211,10 @@ src/foo/Example.kt:5: Warning: Constructor has expensive method calls: foo [Clea
             .run()
             .expect(
                 """
-src/com/test/Example.kt:5: Warning: Constructor creates object that has expensive constructor: Example [CleanConstructor]
+src/com/test/Example.kt:5: Warning: Constructor creates object that has expensive constructor: Example [ExpensiveConstructor]
       field = ExpensiveConstructor()
               ~~~~~~~~~~~~~~~~~~~~
-src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive method calls: getDrawable [CleanConstructor]
+src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive method calls: getDrawable [ExpensiveConstructor]
           getDrawable(R.drawable.test);
           ~~~~~~~~~~~
 0 errors, 2 warnings
@@ -247,13 +247,10 @@ src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive met
             .run()
             .expect(
                 """
-src/foo/Example.java:7: Warning: Constructor with @Inject annotation injected object that has expensive constructor: com.test.ExpensiveConstructor [CleanConstructor]
-  public Example(ExpensiveConstructor c) {
-                                      ~
-src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive method calls: getDrawable [CleanConstructor]
+src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive method calls: getDrawable [ExpensiveConstructor]
           getDrawable(R.drawable.test);
           ~~~~~~~~~~~
-0 errors, 2 warnings
+0 errors, 1 warnings
                 """
                     .trimMargin()
             )

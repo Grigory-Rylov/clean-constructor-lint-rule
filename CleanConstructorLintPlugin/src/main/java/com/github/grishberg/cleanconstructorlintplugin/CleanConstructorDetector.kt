@@ -32,6 +32,10 @@ class CleanConstructorDetector : Detector(), UastScanner {
             if (!call.isConstructorCall()) {
                 return
             }
+            checkConstructorsOfConstructorCall(call)
+        }
+
+        private fun checkConstructorsOfConstructorCall(call: UCallExpression) {
             val callerClass = call.getContainingUClass()
 
             val classReference = call.classReference
@@ -72,20 +76,14 @@ class CleanConstructorDetector : Detector(), UastScanner {
 
         private fun checkConstructor(constructorMethod: UMethod) {
             constructorMethod.accept(ConstructorsMethodsVisitor(context, constructorMethod.uastParent!!))
-            if (hasInjectAnnotation(constructorMethod.annotations)) {
+            if (hasInjectAnnotation(constructorMethod)) {
                 val diGraph = DependencyGraph(constructorMethod.name)
                 checkArgsHasExpensiveConstructor(constructorMethod, diGraph, shouldReport = true)
             }
         }
 
-        private fun hasInjectAnnotation(annotations: List<UAnnotation>): Boolean {
-            for (a in annotations) {
-                val nameReferenceElement = a.qualifiedName
-                if (nameReferenceElement != null && (nameReferenceElement == "javax.inject.Inject" || nameReferenceElement == "Inject")) {
-                    return true
-                }
-            }
-            return false
+        private fun hasInjectAnnotation(constructor: UMethod): Boolean {
+            return constructor.hasAnnotation("javax.inject.Inject") || constructor.hasAnnotation("Inject")
         }
 
         private fun checkArgsHasExpensiveConstructor(
@@ -93,6 +91,8 @@ class CleanConstructorDetector : Detector(), UastScanner {
             diGraph: DependencyGraph,
             shouldReport: Boolean = false
         ): Boolean {
+            var hasExpensiveConstructor = false
+            // check each injected class in parameters.
             for (param in constructor.uastParameters) {
                 val injectedClassName: String = param.typeReference?.getQualifiedName() ?: continue
                 /*
@@ -104,6 +104,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
                     return true
                 }
                 */
+                // check methods calls
                 val clazz = context.evaluator.findClass(injectedClassName) ?: continue
                 val uClass = context.uastContext.getClass(clazz)
                 val constructorVisitor = ReferenceConstructorChecker()
@@ -114,14 +115,15 @@ class CleanConstructorDetector : Detector(), UastScanner {
                     if (shouldReport) {
                         reportExpensiveInjectedParameter(constructor, param, diGraph)
                     }
-                    return true
+                    hasExpensiveConstructor = true
                 }
 
                 for (c in uClass.methods) {
                     if (!c.isConstructor) {
                         continue
                     }
-                    if (hasInjectAnnotation(c.annotations)) {
+                    // check injected parametes.
+                    if (hasInjectAnnotation(c)) {
                         val subclassGraph = DependencyGraph(injectedClassName)
                         if (checkArgsHasExpensiveConstructor(c, subclassGraph)) {
                             diGraph.addGraph(subclassGraph)
@@ -132,12 +134,12 @@ class CleanConstructorDetector : Detector(), UastScanner {
                                     "Constructor with @Inject annotation injected object that has expensive constructor: $diGraph"
                                 )
                             }
-                            return true
+                            hasExpensiveConstructor = true
                         }
                     }
                 }
             }
-            return false
+            return hasExpensiveConstructor
         }
 
         private fun reportExpensiveInjectedParameter(
@@ -169,19 +171,55 @@ class CleanConstructorDetector : Detector(), UastScanner {
         private var hasExpensiveConstructor = false
 
 
-        override fun visitCallExpression(node: UCallExpression): Boolean {
-            if (isCallInAnonymousClass(node)) {
+        override fun visitCallExpression(call: UCallExpression): Boolean {
+            if (isCallInAnonymousClass(call)) {
                 return false
             }
-            if (node.isMethodCall()) {
-                val methodName = node.methodName
+            if (call.isMethodCall()) {
+                val methodName = call.methodName
                 if (methodName != null && !isAllowedIdentifier(methodName)) {
                     hasExpensiveConstructor = true
                     return false
                 }
                 return false
             }
+            if (call.isConstructorCall()) {
+                if (checkConstructorsOfConstructorCall(call)) {
+                    hasExpensiveConstructor = true
+                    return false
+                }
+            }
             return true
+        }
+
+        private fun checkConstructorsOfConstructorCall(call: UCallExpression): Boolean {
+            var result = false
+            val callerClass = call.getContainingUClass()
+
+            val classReference = call.classReference
+            if (classReference != null && callerClass != null) {
+                val resolved = classReference.resolveToUElement()
+                if ((resolved is UClass)) {
+                    for (method in resolved.methods) {
+                        if (!method.isConstructor) {
+                            continue
+                        }
+                        if (checkReferenceConstructors(method)) {
+                            result = true
+                        }
+                    }
+                }
+            }
+            return result
+        }
+
+        private fun checkReferenceConstructors(constructor: UMethod): Boolean {
+            val constructorVisitor = ReferenceConstructorChecker()
+            constructor.accept(constructorVisitor)
+            if (constructorVisitor.hasExpensiveConstructor()) {
+                return true
+            }
+            return false
         }
 
         fun hasExpensiveConstructor() = hasExpensiveConstructor
@@ -191,6 +229,8 @@ class CleanConstructorDetector : Detector(), UastScanner {
         private val context: JavaContext,
         private val parent: UElement
     ) : AbstractUastVisitor() {
+        private var _isExpensiveConstructor = false
+        val isExpensiveConstructor = _isExpensiveConstructor
 
         override fun visitCallExpression(node: UCallExpression): Boolean {
             if (isCallInAnonymousClass(node)) {
@@ -198,6 +238,13 @@ class CleanConstructorDetector : Detector(), UastScanner {
             }
             if (ExcludedClasses.isExcludedClassInExpression(node)) {
                 return false
+            }
+            if (node.isConstructorCall()) {
+                val constructorVisitor = ReferenceConstructorChecker()
+                node.accept(constructorVisitor)
+                if (constructorVisitor.hasExpensiveConstructor()) {
+                    _isExpensiveConstructor = true
+                }
             }
 
             if (node.isMethodCall()) {
@@ -217,6 +264,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
                 val method = it.tryResolve() as? UMethod
                 if (method != null) {
                     if (!method.isConstructor && !isAllowedMethod(method)) {
+                        _isExpensiveConstructor = true
                         context.report(
                             CleanConstructorsRegistry.ISSUE, parent,
                             context.getNameLocation(node),
@@ -234,7 +282,9 @@ class CleanConstructorDetector : Detector(), UastScanner {
 
         private val IGNORED_PARENTS = listOf(
             "android.graphics.drawable.Drawable",
-            "android.view.View"
+            "android.view.View",
+            "android.support.v7.widget.RecyclerView.ViewHolder",
+            "androidx.recyclerview.RecyclerView.ViewHolder"
         )
 
         private val REGEX_LISTENERS = listOf(
