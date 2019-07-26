@@ -10,8 +10,10 @@ Good clean constructor:
 ```
 public class Foo {
     private final ClassA a;
-    public Foo(){
-        a = new ClassA();
+    
+    @Inject
+    public Foo(ClassA classA){
+        a = classA;
     }
 }
 
@@ -21,13 +23,12 @@ public class ClassA {
 
 ```
 
+Not so bad not expensive constructor:
 ```
 public class Foo {
     private final ClassA a;
-    
-    @Inject
-    public Foo(ClassA classA){
-        a = classA;
+    public Foo(){
+        a = new ClassA();
     }
 }
 
