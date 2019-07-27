@@ -6,10 +6,12 @@ import com.android.tools.lint.detector.api.*
 
 class CleanConstructorsRegistry : IssueRegistry() {
     override val issues: List<Issue>
-        get() = listOf(ISSUE)
+        get() = listOf(ISSUE, INJECT_ISSUE)
 
     override val api: Int
         get() = CURRENT_API
+    override val minApi: Int
+        get() = 2
 
     companion object {
         /** Issue describing the problem and pointing to the detector implementation  */
