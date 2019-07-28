@@ -110,8 +110,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
                     if (shouldReport) {
                         reportExpensiveInjectedParameter(constructor, constructorsParam, diGraph)
                     }
-                    return true
-//                    hasExpensiveConstructor = true
+                    hasExpensiveConstructor = true
                 }
 
                 for (c in uClass.methods) {
@@ -225,8 +224,6 @@ class CleanConstructorDetector : Detector(), UastScanner {
         private val context: JavaContext,
         private val parent: UElement
     ) : AbstractUastVisitor() {
-        private var _isExpensiveConstructor = false
-        val isExpensiveConstructor = _isExpensiveConstructor
 
         override fun visitCallExpression(node: UCallExpression): Boolean {
             if (isCallInAnonymousClass(node)) {
@@ -235,14 +232,6 @@ class CleanConstructorDetector : Detector(), UastScanner {
             if (ExcludedClasses.isExcludedClassInExpression(node)) {
                 return false
             }
-            if (node.isConstructorCall()) {
-                val constructorVisitor = ReferenceConstructorChecker()
-                node.accept(constructorVisitor)
-                if (constructorVisitor.hasExpensiveConstructor()) {
-                    _isExpensiveConstructor = true
-                }
-            }
-
             if (node.isMethodCall()) {
                 val methodName = node.methodName
                 if (methodName != null && !isAllowedIdentifier(methodName)) {
@@ -260,7 +249,6 @@ class CleanConstructorDetector : Detector(), UastScanner {
                 val method = it.tryResolve() as? UMethod
                 if (method != null) {
                     if (!method.isConstructor && !isAllowedMethod(method)) {
-                        _isExpensiveConstructor = true
                         context.report(
                             CleanConstructorsRegistry.ISSUE, parent,
                             context.getNameLocation(node),
@@ -280,7 +268,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
             "android.graphics.drawable.Drawable",
             "android.view.View",
             "android.support.v7.widget.RecyclerView.ViewHolder",
-            "androidx.recyclerview.RecyclerView.ViewHolder"
+            "androidx.recyclerview.widget.RecyclerView.ViewHolder"
         )
 
         private val REGEX_LISTENERS = listOf(

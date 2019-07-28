@@ -1,1 +1,1 @@
-include ':app', ':CleanConstructorLintPlugin'
+include ':app', ':clean-constructor-lint-rule'
