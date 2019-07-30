@@ -1,0 +1,15 @@
+//TODO: make core key
+def sonarKey = "Grigory-Rylov_clean-constructor-lint-rule"
+sonarqube {
+    properties {
+        property "sonar.host.url", "https://sonarcloud.io"
+        property "sonar.projectKey", sonarKey
+        //TODO: android-instrumental-test-runner-core
+        property "sonar.projectName", "clean-constructor-lint-rule"
+        property "sonar.projectVersion", "${project.version}"
+        property "sonar.sources", "src/main/java"
+        property "sonar.jacoco.reportPaths", "${project.buildDir}/jacoco/test.exec"
+        property "sonar.test.inclusions", "**/*Test*/**"
+        property "sonar.exclusions", "**/*Test*/**"
+    }
+}

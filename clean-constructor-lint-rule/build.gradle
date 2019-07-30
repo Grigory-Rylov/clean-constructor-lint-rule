@@ -1,6 +1,8 @@
 apply plugin: "kotlin"
 apply plugin: 'com.jfrog.bintray'
 apply plugin: "com.jfrog.artifactory"
+apply plugin: "org.sonarqube"
+apply plugin: 'jacoco'
 
 def libVersion = '1.4.5'
 group 'com.github.grishberg'
@@ -47,6 +49,24 @@ publishing {
     }
 }
 
+
+jacocoTestReport {
+    reports {
+        xml.enabled = true
+        html.enabled = false
+    }
+}
+
+tasks.sonarqube.dependsOn jacocoTestReport
+
+test {
+    jacoco {
+        append = true
+        includeNoLocationClasses = true
+    }
+}
+
+/*
 bintray {
     user = getLocalPropertiesValue("bintray.user")
     key = getLocalPropertiesValue("bintray.apikey")
@@ -74,3 +94,5 @@ def getLocalPropertiesValue(String key) {
     properties.load(project.rootProject.file('local.properties').newDataInputStream())
     return properties.getProperty(key)
 }
+*/
+apply from: 'sonar.gradle'
