@@ -1,0 +1,32 @@
+language: android
+dist: trusty
+android:
+  components:
+  - build-tools-28.0.3
+  - android-28
+  - extra-google-google_play_services
+  - extra-google-m2repository
+  - extra-android-m2repository
+licenses:
+- android-sdk-license-.+
+addons:
+  sonarcloud:
+    organization: grigory-rylov-github
+    token:
+      secure: BBJ2qN2gD20uE2L1tKTKJaYa6yAFgOagM93edhBVaYG/zEnIBEYMOwi8W1/UlrTYOtHk5Iu9zznQLWaRZDdlsVuNPdWrh6BXGZIgRzN1PxGRwnL1Yjqjf5Zn63p5SjU0HnsIPTv8DgrG8vqcj6jX15paaZBbo0vXDwumpdH6UgPrvo349m0Z+sNSbr9Aw4GDhLCqoOLUBEiHaHvgngjTYTyQtNwDI4JQBpdXdn4mAeQWVsmr4ucXh87hnWlRBhTLnMy9X8f0BnWgy9rYh6S9nja90u1Y+q96+eB71r7uBC/rmePTKU2gikAkqNp5MOqoY1bH7RjWu2+1udl0NpAc3HpCSGadL2g3FbAUF35Th9gVpiCivEZl7+g2ynLo8jEURVA/39ODonbj/my1nU7ntXGj3nxrLhii2nngLy3blFkwdjBkyq60KgLU9xV3ROwCEPkfJk3VglClB0lj9fE2gKpz6Yft4sTWEa9CJT6jtTjAl8eGcxOO7h7ltZfSDeZRX9I4eJvMrwaWhIzliCck2+a34boWeTlaTa/L5AVsfmIxxIWtIrS2j7HvtsW5JbJ2uOKNs1jwWxo9r4PvlIXoLR/5RBlC9OrsIvAHPFAzS9vV1D4HQiq/BtPaTJqzA0NT+MsbBTyanWLh4pGyjtWsDxlKgYKUt2YdZuDPizKPuKA=
+    branches:
+    - master
+    - ".*"
+script:
+- "./gradlew sonarqube"
+after_success:
+- mvn clean test jacoco:report coveralls:jacoco
+deploy:
+  provider: bintray
+  user: grigory-rylov
+  skip_cleanup: true
+  key:
+    secure: SQKvIwMeSuri9aB8Lt8nx5fuBT633AqxR0BCk9AE7bBhHmECVXb0R8s2qFbDCIIx9Nh0Ida1qEZBhoa1RmM0x6XYlaSVD4P2aZp91eKjl/TpLvbEhNUUIpZ51Rzilsb/JA3Dejypr4GqRAUC1xDFlm9lddC/eHWYiIpY4o1S5UduT4BbKShMN4AAFrqBkf9WR/+KdJcvssCTwbrbcQqKYii6anAHa8gsXORZIgN81stVjcBuToGE7SE/GIcRRDj2qsvC3r/pt0O8G09CNReR/cFUXFpUFpdwZbHuclQJbj/4zH/jBSqELA6UbATYDe733Z4WrO87x08M5RbiIj+CWGIX2EhZWeO7mlrOfyxFezkSe+qPH4Eb7t9xS6Oe2vekj4hgjDwiBKwTatVop9kmU9q071BsUMjWzUJK6smT6sZ6zkiAo45PMdau7wVLCQCYP6xj9jQ2FNoaS69Lt1gIl/B/1NqvJZbUKhGXwZWa57ZD6xMJzSuixtSQrrWNVMyewS9hoQs1sBGhPniPLFnbTqnIEgbLAieO5AWNFbt0MAYL2h37NvgWC5AqAmjLBRcwmBJPRriY9abyTJn+TmA5juhKl6MrB8Hnqv6MCyudHLcR4wQDjNz84Br2U1xDw1eDmb0DCxlMa3UGPBx0OK1tOQ0nVRLKN6ro10Pb2ltdTGs=
+env:
+  global:
+    secure: BBJ2qN2gD20uE2L1tKTKJaYa6yAFgOagM93edhBVaYG/zEnIBEYMOwi8W1/UlrTYOtHk5Iu9zznQLWaRZDdlsVuNPdWrh6BXGZIgRzN1PxGRwnL1Yjqjf5Zn63p5SjU0HnsIPTv8DgrG8vqcj6jX15paaZBbo0vXDwumpdH6UgPrvo349m0Z+sNSbr9Aw4GDhLCqoOLUBEiHaHvgngjTYTyQtNwDI4JQBpdXdn4mAeQWVsmr4ucXh87hnWlRBhTLnMy9X8f0BnWgy9rYh6S9nja90u1Y+q96+eB71r7uBC/rmePTKU2gikAkqNp5MOqoY1bH7RjWu2+1udl0NpAc3HpCSGadL2g3FbAUF35Th9gVpiCivEZl7+g2ynLo8jEURVA/39ODonbj/my1nU7ntXGj3nxrLhii2nngLy3blFkwdjBkyq60KgLU9xV3ROwCEPkfJk3VglClB0lj9fE2gKpz6Yft4sTWEa9CJT6jtTjAl8eGcxOO7h7ltZfSDeZRX9I4eJvMrwaWhIzliCck2+a34boWeTlaTa/L5AVsfmIxxIWtIrS2j7HvtsW5JbJ2uOKNs1jwWxo9r4PvlIXoLR/5RBlC9OrsIvAHPFAzS9vV1D4HQiq/BtPaTJqzA0NT+MsbBTyanWLh4pGyjtWsDxlKgYKUt2YdZuDPizKPuKA=
