@@ -21,10 +21,17 @@ script:
 - "./gradlew sonarqube"
 after_success:
 - mvn clean test jacoco:report coveralls:jacoco
+
+# Set version to tag for release
+before_deploy:
+  - mvn versions:set -DnewVersion=$TRAVIS_TAG
+  - mvn package -Dmaven.test.skip=true
+
 deploy:
   provider: bintray
   user: grigory-rylov
   skip_cleanup: true
+  file: clean-constructor-lint-rule/deploy-descriptor.json
   key:
     secure: SQKvIwMeSuri9aB8Lt8nx5fuBT633AqxR0BCk9AE7bBhHmECVXb0R8s2qFbDCIIx9Nh0Ida1qEZBhoa1RmM0x6XYlaSVD4P2aZp91eKjl/TpLvbEhNUUIpZ51Rzilsb/JA3Dejypr4GqRAUC1xDFlm9lddC/eHWYiIpY4o1S5UduT4BbKShMN4AAFrqBkf9WR/+KdJcvssCTwbrbcQqKYii6anAHa8gsXORZIgN81stVjcBuToGE7SE/GIcRRDj2qsvC3r/pt0O8G09CNReR/cFUXFpUFpdwZbHuclQJbj/4zH/jBSqELA6UbATYDe733Z4WrO87x08M5RbiIj+CWGIX2EhZWeO7mlrOfyxFezkSe+qPH4Eb7t9xS6Oe2vekj4hgjDwiBKwTatVop9kmU9q071BsUMjWzUJK6smT6sZ6zkiAo45PMdau7wVLCQCYP6xj9jQ2FNoaS69Lt1gIl/B/1NqvJZbUKhGXwZWa57ZD6xMJzSuixtSQrrWNVMyewS9hoQs1sBGhPniPLFnbTqnIEgbLAieO5AWNFbt0MAYL2h37NvgWC5AqAmjLBRcwmBJPRriY9abyTJn+TmA5juhKl6MrB8Hnqv6MCyudHLcR4wQDjNz84Br2U1xDw1eDmb0DCxlMa3UGPBx0OK1tOQ0nVRLKN6ro10Pb2ltdTGs=
 env:

@@ -1,5 +1,5 @@
 ## Lint rule for android projects for searching expensive constructors (constructors are not code-free)
-[ ![Download](https://api.bintray.com/packages/grigory-rylov/android/clean-constructor-lint-rule/images/download.svg?version=1.4.5) ](https://bintray.com/grigory-rylov/android/clean-constructor-lint-rule/1.4.5/link)
+[ ![Download](https://api.bintray.com/packages/grigory-rylov/android/clean-constructor-lint-rule/images/download.svg?version=1.4.5) ](https://bintray.com/grigory-rylov/android/clean-constructor-lint-rule/1.4.5/link) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Grigory-Rylov_clean-constructor-lint-rule&metric=alert_status)](https://sonarcloud.io/dashboard?id=Grigory-Rylov_clean-constructor-lint-rule) [![Build Status](https://travis-ci.org/Grigory-Rylov/clean-constructor-lint-rule.svg?branch=master)](https://travis-ci.org/Grigory-Rylov/clean-constructor-lint-rule)
 
 Good clean constructor:
 ```
