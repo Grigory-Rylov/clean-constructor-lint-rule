@@ -34,7 +34,7 @@ deploy:
   skip_cleanup: true
   on:
     branch: master
-    tags: true
+    # tags: true - for deploying only for tagged commit
 env:
   global:
     secure: BBJ2qN2gD20uE2L1tKTKJaYa6yAFgOagM93edhBVaYG/zEnIBEYMOwi8W1/UlrTYOtHk5Iu9zznQLWaRZDdlsVuNPdWrh6BXGZIgRzN1PxGRwnL1Yjqjf5Zn63p5SjU0HnsIPTv8DgrG8vqcj6jX15paaZBbo0vXDwumpdH6UgPrvo349m0Z+sNSbr9Aw4GDhLCqoOLUBEiHaHvgngjTYTyQtNwDI4JQBpdXdn4mAeQWVsmr4ucXh87hnWlRBhTLnMy9X8f0BnWgy9rYh6S9nja90u1Y+q96+eB71r7uBC/rmePTKU2gikAkqNp5MOqoY1bH7RjWu2+1udl0NpAc3HpCSGadL2g3FbAUF35Th9gVpiCivEZl7+g2ynLo8jEURVA/39ODonbj/my1nU7ntXGj3nxrLhii2nngLy3blFkwdjBkyq60KgLU9xV3ROwCEPkfJk3VglClB0lj9fE2gKpz6Yft4sTWEa9CJT6jtTjAl8eGcxOO7h7ltZfSDeZRX9I4eJvMrwaWhIzliCck2+a34boWeTlaTa/L5AVsfmIxxIWtIrS2j7HvtsW5JbJ2uOKNs1jwWxo9r4PvlIXoLR/5RBlC9OrsIvAHPFAzS9vV1D4HQiq/BtPaTJqzA0NT+MsbBTyanWLh4pGyjtWsDxlKgYKUt2YdZuDPizKPuKA=
