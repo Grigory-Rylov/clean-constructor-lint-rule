@@ -21,6 +21,20 @@ class RecursiveInjectedConstructorDetectorTest {
       }"""
     ).indented()
 
+    private val expensiveConstructor2Class = java(
+        """
+      package com.test;
+      public class ExpensiveConstructor2 {
+        public ExpensiveConstructor2() {
+            foo();
+        }
+
+        private void foo() {
+            Thread.sleep(1000L);
+        }
+      }"""
+    ).indented()
+
     private val expensiveConstructorClass2 = java(
         """
       package com.test;
@@ -31,13 +45,23 @@ class RecursiveInjectedConstructorDetectorTest {
       }"""
     ).indented()
 
+    private val injectedConstructorClass3 = java(
+        """
+      package com.test;
+      import javax.inject.Inject;
+      public class InjectedConstructor2 {
+        @Inject
+        public InjectedConstructor2(ExpensiveConstructor2 c) { }
+      }"""
+    ).indented()
+
     private val expensiveConstructorClass3 = java(
         """
       package com.test;
       import javax.inject.Inject;
       public class TestedClass {
         @Inject
-        public TestedClass(InjectedConstructor ic) { }
+        public TestedClass(InjectedConstructor ic, InjectedConstructor2 ic2) { }
       }"""
     ).indented()
 
@@ -84,7 +108,8 @@ class RecursiveInjectedConstructorDetectorTest {
     @Test
     fun constructorHasMethodCalls() {
         lint()
-            .files(expensiveConstructorClass3, expensiveConstructorClass2, expensiveConstructorClass)
+            .files(expensiveConstructorClass3, expensiveConstructorClass2, expensiveConstructorClass,
+                expensiveConstructor2Class, injectedConstructorClass3)
             .issues(CleanConstructorsRegistry.ISSUE, CleanConstructorsRegistry.INJECT_ISSUE)
             .run()
             .expect(
@@ -92,13 +117,22 @@ class RecursiveInjectedConstructorDetectorTest {
 src/com/test/InjectedConstructor.java:5: Warning: Constructor with @Inject annotation injected object that has expensive constructor: com.test.ExpensiveConstructor [InjectedExpensiveConstructor]
   public InjectedConstructor(ExpensiveConstructor c) { }
                                                   ~
+src/com/test/InjectedConstructor2.java:5: Warning: Constructor with @Inject annotation injected object that has expensive constructor: com.test.ExpensiveConstructor2 [InjectedExpensiveConstructor]
+  public InjectedConstructor2(ExpensiveConstructor2 c) { }
+                                                    ~
 src/com/test/TestedClass.java:5: Warning: Constructor with @Inject annotation injected object that has expensive constructor: com.test.InjectedConstructor -> com.test.ExpensiveConstructor [InjectedExpensiveConstructor]
-  public TestedClass(InjectedConstructor ic) { }
+  public TestedClass(InjectedConstructor ic, InjectedConstructor2 ic2) { }
                                          ~~
+src/com/test/TestedClass.java:5: Warning: Constructor with @Inject annotation injected object that has expensive constructor: com.test.InjectedConstructor2 -> com.test.ExpensiveConstructor2 [InjectedExpensiveConstructor]
+  public TestedClass(InjectedConstructor ic, InjectedConstructor2 ic2) { }
+                                                                  ~~~
 src/com/test/ExpensiveConstructor.java:4: Warning: Constructor has expensive method calls: foo [ExpensiveConstructor]
       foo();
       ~~~
-0 errors, 3 warnings
+src/com/test/ExpensiveConstructor2.java:4: Warning: Constructor has expensive method calls: foo [ExpensiveConstructor]
+      foo();
+      ~~~
+0 errors, 6 warnings
                 """
                     .trimMargin()
             )

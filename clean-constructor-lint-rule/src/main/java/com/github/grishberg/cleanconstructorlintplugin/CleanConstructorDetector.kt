@@ -77,8 +77,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
         private fun checkConstructor(constructorMethod: UMethod) {
             constructorMethod.accept(ConstructorsMethodsVisitor(context, constructorMethod.uastParent!!))
             if (hasInjectAnnotation(constructorMethod)) {
-                val diGraph = DependencyGraph(constructorMethod.name)
-                checkArgsHasExpensiveConstructor(constructorMethod, diGraph, shouldReport = true)
+                checkArgsHasExpensiveConstructor(constructorMethod, null, shouldReport = true)
             }
         }
 
@@ -88,13 +87,15 @@ class CleanConstructorDetector : Detector(), UastScanner {
 
         private fun checkArgsHasExpensiveConstructor(
             constructor: UMethod,
-            diGraph: DependencyGraph,
+            parentDiGraph: DependencyGraph?,
             shouldReport: Boolean = false
         ): Boolean {
             var hasExpensiveConstructor = false
             // check each injected class in parameters.
             for (constructorsParam in constructor.uastParameters) {
                 val injectedClassName: String = constructorsParam.typeReference?.getQualifiedName() ?: continue
+                val diGraph: DependencyGraph = parentDiGraph ?: DependencyGraph(constructor.name)
+
                 if (diGraph.hasElement(injectedClassName)) {
                     continue
                 }
