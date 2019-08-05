@@ -8,5 +8,6 @@ public class ClassB {
     @Inject
     public ClassB(ClassC classC) {
         this.classC = classC;
+        classC.someMethod();
     }
 }
