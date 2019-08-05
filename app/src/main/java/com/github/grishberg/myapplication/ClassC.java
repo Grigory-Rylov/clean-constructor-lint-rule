@@ -9,4 +9,12 @@ public class ClassC {
     public ClassC(ExpensiveClassA classA) {
         this.classA = classA;
     }
+
+    public void someMethod() {
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 }
