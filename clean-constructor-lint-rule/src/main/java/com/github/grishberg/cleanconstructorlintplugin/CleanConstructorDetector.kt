@@ -103,15 +103,27 @@ class CleanConstructorDetector : Detector(), UastScanner {
                 // check parameter's constructor
                 val clazz = context.evaluator.findClass(injectedClassName) ?: continue
                 val uClass = context.uastContext.getClass(clazz)
-                val constructorVisitor = ReferenceConstructorChecker()
-                uClass.accept(constructorVisitor)
-                if (constructorVisitor.hasExpensiveConstructor()) {
-                    diGraph.addElement(injectedClassName)
-                    expensiveClasses.add(injectedClassName, diGraph)
-                    if (shouldReport) {
-                        reportExpensiveInjectedParameter(constructor, constructorsParam, diGraph)
+
+                var paramConstructorHasExpensiveMethod = false
+                for (paramConstuctor in uClass.methods) {
+                    if (!paramConstuctor.isConstructor) {
+                        continue
                     }
-                    hasExpensiveConstructor = true
+                    val classVisitor = ReferenceConstructorChecker()
+                    paramConstuctor.accept(classVisitor)
+                    if (classVisitor.hasExpensiveConstructor()) {
+                        diGraph.addElement(injectedClassName)
+                        expensiveClasses.add(injectedClassName, diGraph)
+                        if (shouldReport) {
+                            reportExpensiveInjectedParameter(constructor, constructorsParam, diGraph)
+                        }
+                        paramConstructorHasExpensiveMethod = true
+                        hasExpensiveConstructor = true
+                        break
+                    }
+                }
+                if (paramConstructorHasExpensiveMethod) {
+                    continue
                 }
 
                 for (c in uClass.methods) {
@@ -123,10 +135,10 @@ class CleanConstructorDetector : Detector(), UastScanner {
                         val subclassGraph = DependencyGraph(injectedClassName)
                         if (checkArgsHasExpensiveConstructor(c, subclassGraph)) {
                             diGraph.addGraph(subclassGraph)
-                            if (shouldReport) {
+                            if (shouldReport && constructorsParam.toUElement() != null) {
                                 context.report(
                                     CleanConstructorsRegistry.INJECT_ISSUE, constructor,
-                                    context.getNameLocation(constructorsParam),
+                                    context.getNameLocation(constructorsParam.toUElement()!!),
                                     "Constructor with @Inject annotation injected object that has expensive constructor: $diGraph"
                                 )
                             }
@@ -143,9 +155,10 @@ class CleanConstructorDetector : Detector(), UastScanner {
             param: UParameter,
             diGraph: DependencyGraph
         ) {
+
             context.report(
                 CleanConstructorsRegistry.INJECT_ISSUE, constructor,
-                context.getNameLocation(param),
+                context.getNameLocation(param.toUElement()!!),
                 "Constructor with @Inject annotation injected object that has expensive constructor: $diGraph"
             )
         }
@@ -171,6 +184,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
             if (isCallInAnonymousClass(call)) {
                 return false
             }
+
             if (call.isMethodCall()) {
                 val methodName = call.methodName
                 if (methodName != null && !isAllowedIdentifier(methodName)) {
@@ -179,6 +193,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
                 }
                 return false
             }
+
             if (call.isConstructorCall()) {
                 if (checkConstructorsOfConstructorCall(call)) {
                     hasExpensiveConstructor = true
