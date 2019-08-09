@@ -288,6 +288,10 @@ class CleanConstructorDetector : Detector(), UastScanner {
         )
 
         private val REGEX_LISTENERS = listOf(
+            "add\\w*Action".toRegex(),
+            "register\\w*Action".toRegex(),
+            "remove\\w*Action".toRegex(),
+            "unregister\\w*Action".toRegex(),
             "add\\w*Listener".toRegex(),
             "add\\w*Observer".toRegex(),
             "remove\\w*Observer".toRegex(),
