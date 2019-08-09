@@ -165,8 +165,16 @@ class CleanConstructorDetector : Detector(), UastScanner {
 
         private fun isIgnoredSupertype(node: UClass): Boolean {
             for (superType in node.uastSuperTypes) {
-                if (IGNORED_PARENTS.contains(superType.getQualifiedName())) {
+                val name = superType.getQualifiedName() ?: superType.toString()
+                if (IGNORED_PARENTS.contains(name)) {
                     return true
+                } else {
+                    val className = superType.getQualifiedName() ?: continue
+                    val clazz = context.evaluator.findClass(className) ?: continue
+                    val superTypeClass = context.uastContext.getClass(clazz)
+                    if (isIgnoredSupertype(superTypeClass)) {
+                        return true
+                    }
                 }
             }
             return false
