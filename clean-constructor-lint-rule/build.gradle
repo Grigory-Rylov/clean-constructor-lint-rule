@@ -4,7 +4,7 @@ apply plugin: "com.jfrog.artifactory"
 apply plugin: "org.sonarqube"
 apply plugin: 'jacoco'
 
-def libVersion = '1.5.1'
+def libVersion = '1.5.2'
 group 'com.github.grishberg'
 version libVersion
 

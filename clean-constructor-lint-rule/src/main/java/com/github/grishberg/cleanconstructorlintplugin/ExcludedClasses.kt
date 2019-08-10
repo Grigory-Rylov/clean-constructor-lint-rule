@@ -12,7 +12,8 @@ class ExcludedClasses {
             "java.util.List",
             "java.util.Map",
             "android.support.v4.util.SparseArrayCompat",
-            "android.util.SparseIntArray"
+            "android.util.SparseIntArray",
+            "SparseArrayCompat<>"
         )
 
         fun isExcludedClassInExpression(node: UCallExpression): Boolean {
