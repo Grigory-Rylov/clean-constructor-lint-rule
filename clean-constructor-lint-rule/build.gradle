@@ -4,7 +4,7 @@ apply plugin: "com.jfrog.artifactory"
 apply plugin: "org.sonarqube"
 apply plugin: 'jacoco'
 
-def libVersion = '1.5.0'
+def libVersion = '1.5.1'
 group 'com.github.grishberg'
 version libVersion
 
@@ -21,6 +21,9 @@ dependencies {
     compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.31"
     testImplementation "com.android.tools.lint:lint:26.4.2"
     testImplementation "com.android.tools.lint:lint-tests:26.4.2"
+    // https://mvnrepository.com/artifact/org.apache.commons/commons-io
+    testImplementation group: 'org.apache.commons', name: 'commons-io', version: '1.3.2'
+
 
     compileOnly 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.0'
     compileOnly 'com.github.dcendents:android-maven-gradle-plugin:2.1'
