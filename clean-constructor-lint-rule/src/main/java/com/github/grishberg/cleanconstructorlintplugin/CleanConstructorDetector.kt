@@ -53,7 +53,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
         }
 
         private fun checkReferenceConstructors(callerClass: UClass, constructor: UMethod, call: UCallExpression) {
-            val constructorVisitor = ReferenceConstructorChecker()
+            val constructorVisitor = ReferenceConstructorChecker(context)
             constructor.accept(constructorVisitor)
             if (constructorVisitor.hasExpensiveConstructor()) {
                 context.report(
@@ -68,7 +68,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
             if (!node.isConstructor) {
                 return
             }
-            if (node.uastParent is UClass && isIgnoredSupertype(node.uastParent as UClass)) {
+            if (node.uastParent is UClass && isIgnoredSupertype(node.uastParent as UClass, context)) {
                 return
             }
             checkConstructor(node)
@@ -109,7 +109,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
                     if (!paramConstuctor.isConstructor) {
                         continue
                     }
-                    val classVisitor = ReferenceConstructorChecker()
+                    val classVisitor = ReferenceConstructorChecker(context)
                     paramConstuctor.accept(classVisitor)
                     if (classVisitor.hasExpensiveConstructor()) {
                         diGraph.addElement(injectedClassName)
@@ -162,29 +162,14 @@ class CleanConstructorDetector : Detector(), UastScanner {
                 "Constructor with @Inject annotation injected object that has expensive constructor: $diGraph"
             )
         }
-
-        private fun isIgnoredSupertype(node: UClass): Boolean {
-            for (superType in node.uastSuperTypes) {
-                val name = superType.getQualifiedName() ?: superType.toString()
-                if (IGNORED_PARENTS.contains(name)) {
-                    return true
-                } else {
-                    val className = superType.getQualifiedName() ?: continue
-                    val clazz = context.evaluator.findClass(className) ?: continue
-                    val superTypeClass = context.uastContext.getClass(clazz)
-                    if (isIgnoredSupertype(superTypeClass)) {
-                        return true
-                    }
-                }
-            }
-            return false
-        }
     }
 
     /**
      * Visit method calls inside current method.
      */
-    private class ReferenceConstructorChecker : AbstractUastVisitor() {
+    private class ReferenceConstructorChecker(
+        private val context: JavaContext
+    ) : AbstractUastVisitor() {
         private var hasExpensiveConstructor = false
 
 
@@ -192,7 +177,9 @@ class CleanConstructorDetector : Detector(), UastScanner {
             if (isCallInAnonymousClass(call)) {
                 return false
             }
-
+            if (isIgnoredSupertype(call.getContainingUClass() as UClass, context)) {
+                return false
+            }
             if (call.isMethodCall()) {
                 val methodName = call.methodName
                 if (methodName != null && !isAllowedIdentifier(methodName)) {
@@ -233,7 +220,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
         }
 
         private fun checkReferenceConstructors(constructor: UMethod): Boolean {
-            val constructorVisitor = ReferenceConstructorChecker()
+            val constructorVisitor = ReferenceConstructorChecker(context)
             constructor.accept(constructorVisitor)
             if (constructorVisitor.hasExpensiveConstructor()) {
                 return true
@@ -251,6 +238,9 @@ class CleanConstructorDetector : Detector(), UastScanner {
 
         override fun visitCallExpression(node: UCallExpression): Boolean {
             if (isCallInAnonymousClass(node)) {
+                return false
+            }
+            if (isIgnoredSupertype(node.getContainingUClass() as UClass, context)) {
                 return false
             }
             if (ExcludedClasses.isExcludedClassInExpression(node)) {
@@ -292,7 +282,8 @@ class CleanConstructorDetector : Detector(), UastScanner {
             "android.graphics.drawable.Drawable",
             "android.view.View",
             "android.support.v7.widget.RecyclerView.ViewHolder",
-            "androidx.recyclerview.widget.RecyclerView.ViewHolder"
+            "androidx.recyclerview.widget.RecyclerView.ViewHolder",
+            "RecyclerView.ViewHolder"
         )
 
         private val REGEX_LISTENERS = listOf(
@@ -344,6 +335,23 @@ class CleanConstructorDetector : Detector(), UastScanner {
                     return true
                 }
                 parent = parent.uastParent
+            }
+            return false
+        }
+
+        private fun isIgnoredSupertype(node: UClass, context: JavaContext): Boolean {
+            for (superType in node.uastSuperTypes) {
+                val name = superType.getQualifiedName() ?: superType.toString()
+                if (IGNORED_PARENTS.contains(name)) {
+                    return true
+                } else {
+                    val className = superType.getQualifiedName() ?: continue
+                    val clazz = context.evaluator.findClass(className) ?: continue
+                    val superTypeClass = context.uastContext.getClass(clazz)
+                    if (isIgnoredSupertype(superTypeClass, context)) {
+                        return true
+                    }
+                }
             }
             return false
         }
