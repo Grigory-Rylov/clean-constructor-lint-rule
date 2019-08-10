@@ -1,4 +1,4 @@
-package com.grishberg.listarch.listarchitecture.rv;
+package com.github.grishberg.delegateadapter;
 
 import android.view.*;
 import android.widget.*;

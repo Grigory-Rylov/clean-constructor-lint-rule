@@ -13,13 +13,14 @@ class ExcludedClasses {
             "java.util.Map",
             "android.support.v4.util.SparseArrayCompat",
             "android.util.SparseIntArray",
-            "SparseArrayCompat<>"
+            "SparseArrayCompat"
         )
 
         fun isExcludedClassInExpression(node: UCallExpression): Boolean {
             val type: PsiType? = TypeEvaluator.evaluate(node.receiver)
             if (type != null) {
-                if (IGNORED_TYPES.contains(type.getCanonicalText(false))) {
+                val typeName = extractTypeWithoutGenericSubtype(type.getCanonicalText(false))
+                if (IGNORED_TYPES.contains(typeName)) {
                     return true
                 }
                 for (subtype in type.superTypes) {
@@ -30,6 +31,14 @@ class ExcludedClasses {
             }
 
             return false
+        }
+
+        private fun extractTypeWithoutGenericSubtype(name: String): String {
+            val pos = name.indexOf("<")
+            if (pos > 0) {
+                return name.substring(0, pos)
+            }
+            return name
         }
     }
 }

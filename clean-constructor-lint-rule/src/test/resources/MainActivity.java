@@ -1,4 +1,4 @@
-package com.grishberg.listarch.listarchitecture;
+package com.github.grishberg.delegateadapter;
 
 import android.app.Activity;
 import android.os.Bundle;

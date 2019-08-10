@@ -25,13 +25,13 @@ class ConstructorsTest {
     fun noWarningForAvailableConstructors() {
         TestLintTask.lint()
             .files(
-                java(readFromResource("MainActivity.java")),
                 java(readFromResource("ItemsAdapter.java")),
                 java(readFromResource("CompositeDelegateAdapter.java")),
                 java(readFromResource("Delegates.java")),
                 java(readFromResource("ItemsTracker.java")),
                 java(readFromResource("ItemWithId.java")),
                 java(readFromResource("ViewTracker.java")),
+                java(readFromResource("MainActivity.java")),
                 java(readFromResource("AdapterDelegate.java"))
             )
             .issues(CleanConstructorsRegistry.ISSUE, CleanConstructorsRegistry.INJECT_ISSUE)
