@@ -181,6 +181,9 @@ class CleanConstructorDetector : Detector(), UastScanner {
                 return false
             }
             if (call.isMethodCall()) {
+                if (ExcludedClasses.isExcludedClassInExpression(call)) {
+                    return false
+                }
                 val methodName = call.methodName
                 if (methodName != null && !isAllowedIdentifier(methodName)) {
                     hasExpensiveConstructor = true
