@@ -252,6 +252,11 @@ class CleanConstructorDetector : Detector(), UastScanner {
             if (node.isMethodCall()) {
                 val methodName = node.methodName
                 if (methodName != null && !isAllowedIdentifier(methodName)) {
+                    val methodChecker = MethodChecker(context, node)
+                    if (!methodChecker.isExpensive()) {
+                        return true
+                    }
+
                     context.report(
                         CleanConstructorsRegistry.ISSUE, parent,
                         context.getNameLocation(node),
