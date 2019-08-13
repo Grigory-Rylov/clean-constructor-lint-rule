@@ -15,9 +15,11 @@ class CleanConstructorDetectorTest {
                 getDrawable(R.drawable.test);
             }
         }
-        public void getDrawable(int id) {}
-        public void getColor(int id) {}
-        public void getColorStateList(int id) {}
+        public void getDrawable(int id) {
+            try { Thread.sleep(1000);} catch (Exception e) {}
+        }
+        public void getColor(int id) {try { Thread.sleep(1000);} catch (Exception e) {}}
+        public void getColorStateList(int id) {try { Thread.sleep(1000);} catch (Exception e) {}}
       }"""
     ).indented()
 
