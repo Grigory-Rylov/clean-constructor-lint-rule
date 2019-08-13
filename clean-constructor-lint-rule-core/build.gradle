@@ -10,7 +10,7 @@ version libVersion
 
 ext {
     PUBLISH_GROUP_ID = group
-    PUBLISH_ARTIFACT_ID = 'clean-constructor-lint-rule'
+    PUBLISH_ARTIFACT_ID = 'clean-constructor-lint-rule-core'
     PUBLISH_VERSION = version
 }
 
@@ -32,13 +32,6 @@ dependencies {
 sourceCompatibility = "8"
 targetCompatibility = "8"
 
-jar {
-    manifest {
-        attributes("Lint-Registry-v2": "com.github.grishberg.cleanconstructorlintplugin.CleanConstructorsRegistry")
-    }
-}
-
-
 // need to call  ./gradlew clean build generateRelease
 apply from: 'publish.gradle'
 
@@ -59,26 +52,36 @@ bintray {
     configurations = ['archives']
     pkg {
         repo = "android"
-        name = "clean-constructor-lint-rule"
+        name = "clean-constructor-lint-rule-core"
         desc = "Android lint rule for detecting non clean constructors."
         websiteUrl = "https://github.com/Grigory-Rylov/clean-constructor-lint-rule"
         vcsUrl = "https://github.com/Grigory-Rylov/clean-constructor-lint-rule"
-        githubRepo = "https://github.com/Grigory-Rylov/clean-constructor-lint-rule"
+        githubRepo = "Grigory-Rylov/clean-constructor-lint-rule"
         githubReleaseNotesFile = "https://github.com/Grigory-Rylov/clean-constructor-lint-rule/blob/master/README.md"
         publicDownloadNumbers = true
         licenses = ["Apache-2.0"]
         publish = true
         version {
             name = libVersion
-            released = new Date()
+            released  = new Date()
         }
     }
 }
 
-sourceSets{
-    main{
-        java {
-            srcDirs=['../clean-constructor-lint-rule-core/src/main/java']
-        }
+jacocoTestReport {
+    reports {
+        xml.enabled = true
+        html.enabled = false
     }
 }
+
+tasks.sonarqube.dependsOn jacocoTestReport
+
+test {
+    jacoco {
+        append = true
+        includeNoLocationClasses = true
+    }
+}
+
+apply from: 'sonar.gradle'
