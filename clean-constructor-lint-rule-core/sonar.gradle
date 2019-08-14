@@ -5,7 +5,7 @@ sonarqube {
         property "sonar.host.url", "https://sonarcloud.io"
         property "sonar.projectKey", sonarKey
         //TODO: android-instrumental-test-runner-core
-        property "sonar.projectName", "clean-constructor-lint-rule"
+        property "sonar.projectName", "clean-constructor-lint-rule-core"
         property "sonar.projectVersion", "${project.version}"
         property "sonar.sources", "src/main/java"
         property "sonar.jacoco.reportPaths", "${project.buildDir}/jacoco/test.exec"
