@@ -1,4 +1,4 @@
-package com.github.grishberg.cleanconstructorlintplugin
+package com.github.grishberg.cleanconstructorlintplugin.graph
 
 /**
  * Contains info about chain of dependencies.
