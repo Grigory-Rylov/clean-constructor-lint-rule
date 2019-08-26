@@ -13,6 +13,9 @@ class InjectedClassWithStaticMethod {
 
         }
 
+        public void addListener(Runnable runnable) {
+            // do something
+        }
         public static void foo() {
             Thread.sleep(1000L);
         }
@@ -70,6 +73,34 @@ src/com/test/TestedClass.java:6: Warning: Constructor has expensive method calls
                 """
                     .trimMargin()
             )
+    }
+
+    @Test
+    fun ignoreMethodReferenceInAddListener() {
+        TestLintTask.lint()
+            .files(
+                cleanConstructorClass,
+                java(
+                    """
+      package com.test;
+      public class CleanConstructorWithMethodReference {
+        public CleanConstructorWithMethodReference(CleanConstructorWithStaticMethod foo) {
+            foo.addListener(this::someListenerMethod);
+        }
+        
+        private void someListenerMethod(){
+            //do something
+        }
+
+        public static void foo() {
+            Thread.sleep(1000L);
+        }
+      }"""
+                ).indented()
+            )
+            .issues(CleanConstructorsRegistry.ISSUE, CleanConstructorsRegistry.INJECT_ISSUE)
+            .run()
+            .expect("No warnings.")
     }
 
 }
