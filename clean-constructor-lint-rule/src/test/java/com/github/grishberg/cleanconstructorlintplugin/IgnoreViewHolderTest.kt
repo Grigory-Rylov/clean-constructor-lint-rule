@@ -37,7 +37,7 @@ class IgnoreViewHolderTest {
     fun constructorHasMethodCalls() {
         TestLintTask.lint()
             .files(viewHolderSample, testedSubclassOfViewHolder)
-            .issues(CleanConstructorsRegistry.ISSUE)
+            .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expect(
                 "No warnings."

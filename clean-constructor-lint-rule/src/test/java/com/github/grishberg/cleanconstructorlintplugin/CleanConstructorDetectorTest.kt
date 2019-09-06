@@ -36,43 +36,6 @@ class CleanConstructorDetectorTest {
     ).indented()
 
     @Test
-    fun constructorHasMethodCalls() {
-        lint()
-            .files(
-                java(
-                    """
-          package foo;
-          import android.content.res.Resources;
-          class Example {
-            private SomeAnotherClass anotherClass;
-            public Example(Resources res) {
-                foo(res);
-                anotherClass.slowMethod();
-            }
-
-            public void foo(Resources resources) {
-              resources.getDrawable(0);
-            }
-          }"""
-                ).indented()
-            )
-            .issues(CleanConstructorsRegistry.ISSUE)
-            .run()
-            .expect(
-                """
-src/foo/Example.java:6: Warning: Constructor has expensive method calls: foo [ExpensiveConstructor]
-      foo(res);
-      ~~~
-src/foo/Example.java:7: Warning: Constructor has expensive method calls: slowMethod [ExpensiveConstructor]
-      anotherClass.slowMethod();
-                   ~~~~~~~~~~
-0 errors, 2 warnings
-                """
-                    .trimMargin()
-            )
-    }
-
-    @Test
     fun notWarningWhenCallSuperInConstructor() {
         lint()
             .files(
@@ -90,7 +53,7 @@ src/foo/Example.java:7: Warning: Constructor has expensive method calls: slowMet
           }"""
                 ).indented()
             )
-            .issues(CleanConstructorsRegistry.ISSUE)
+            .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expect("No warnings.")
     }
@@ -110,7 +73,7 @@ src/foo/Example.java:7: Warning: Constructor has expensive method calls: slowMet
           }"""
                 ).indented()
             )
-            .issues(CleanConstructorsRegistry.ISSUE)
+            .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expect(
                 """
@@ -149,7 +112,7 @@ src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive met
           }"""
                 ).indented()
             )
-            .issues(CleanConstructorsRegistry.ISSUE)
+            .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expect("No warnings.")
     }
@@ -168,12 +131,12 @@ src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive met
                 foo()
             }
             fun foo() {
-              resources.getDrawable(0)
+              Thread.sleep(100)
             }
           }"""
                 ).indented()
             )
-            .issues(CleanConstructorsRegistry.ISSUE)
+            .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expect(
                 """
@@ -202,7 +165,7 @@ src/foo/Example.kt:5: Warning: Constructor has expensive method calls: foo [Expe
           }"""
                 ).indented()
             )
-            .issues(CleanConstructorsRegistry.ISSUE)
+            .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expect(
                 """
@@ -238,7 +201,7 @@ src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive met
           }"""
                 ).indented()
             )
-            .issues(CleanConstructorsRegistry.ISSUE)
+            .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expect(
                 """
@@ -276,7 +239,7 @@ src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive met
           }"""
                 ).indented()
             )
-            .issues(CleanConstructorsRegistry.ISSUE)
+            .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expect("No warnings.")
     }
@@ -302,7 +265,7 @@ src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive met
             """
                 ).indented()
             )
-            .issues(CleanConstructorsRegistry.ISSUE)
+            .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expect("No warnings.")
     }

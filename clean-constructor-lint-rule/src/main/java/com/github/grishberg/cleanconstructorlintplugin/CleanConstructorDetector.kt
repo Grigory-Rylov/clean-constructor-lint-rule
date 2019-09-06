@@ -1,10 +1,8 @@
 package com.github.grishberg.cleanconstructorlintplugin
 
 import com.android.tools.lint.client.api.UElementHandler
-import com.android.tools.lint.detector.api.Context
-import com.android.tools.lint.detector.api.Detector
+import com.android.tools.lint.detector.api.*
 import com.android.tools.lint.detector.api.Detector.UastScanner
-import com.android.tools.lint.detector.api.JavaContext
 import com.github.grishberg.cleanconstructorlintplugin.graph.DependencyGraph
 import com.github.grishberg.cleanconstructorlintplugin.graph.ExpensiveConstructorsRepository
 import org.jetbrains.uast.*
@@ -17,17 +15,12 @@ import org.jetbrains.uast.util.isConstructorCall
 class CleanConstructorDetector : Detector(), UastScanner {
     private val expensiveClasses =
         ExpensiveConstructorsRepository()
-    private val membersChecks = ClassMembersChecks()
 
     override fun getApplicableUastTypes() =
         listOf<Class<out UElement>>(UCallExpression::class.java, UMethod::class.java)
 
     override fun createUastHandler(context: JavaContext): UElementHandler {
-        return NamingPatternHandler(context, membersChecks, expensiveClasses)
-    }
-
-    override fun afterCheckRootProject(context: Context) {
-        // TODO: show which arguments need to make as Lazy.
+        return NamingPatternHandler(context, ClassMembersChecks(context), expensiveClasses)
     }
 
     class NamingPatternHandler(
@@ -61,11 +54,11 @@ class CleanConstructorDetector : Detector(), UastScanner {
         }
 
         private fun checkReferenceConstructors(callerClass: UClass, constructor: UMethod, call: UCallExpression) {
-            val constructorVisitor = ReferenceConstructorChecker(context, membersChecks)
+            val constructorVisitor = ConstructorsMethodsVisitor(context, membersChecks)
             constructor.accept(constructorVisitor)
-            if (constructorVisitor.hasExpensiveConstructor()) {
+            if (constructorVisitor.isExpensiveConstructor()) {
                 context.report(
-                    CleanConstructorsRegistry.ISSUE, call,
+                    ISSUE, call,
                     context.getNameLocation(call),
                     "Constructor creates object that has expensive constructor: ${callerClass.name}"
                 )
@@ -83,7 +76,12 @@ class CleanConstructorDetector : Detector(), UastScanner {
         }
 
         private fun checkConstructor(constructorMethod: UMethod) {
-            constructorMethod.accept(ConstructorsMethodsVisitor(context, membersChecks, constructorMethod.uastParent!!))
+            constructorMethod.accept(
+                ConstructorsMethodsVisitor(
+                    context, membersChecks,
+                    ContextReportingStrategy(context, constructorMethod.uastParent!!)
+                )
+            )
             if (hasInjectAnnotation(constructorMethod)) {
                 checkArgsHasExpensiveConstructor(constructorMethod, null, shouldReport = true)
             }
@@ -133,9 +131,9 @@ class CleanConstructorDetector : Detector(), UastScanner {
                 if (!parameterClassMethod.isConstructor) {
                     continue // hasExpensiveConstructor = false
                 }
-                val classVisitor = ReferenceConstructorChecker(context, membersChecks)
+                val classVisitor = ConstructorsMethodsVisitor(context, membersChecks)
                 parameterClassMethod.accept(classVisitor)
-                if (classVisitor.hasExpensiveConstructor()) {
+                if (classVisitor.isExpensiveConstructor()) {
                     diGraph.addElement(injectedClassName)
                     expensiveClasses.add(injectedClassName, diGraph)
                     if (shouldReport) {
@@ -179,7 +177,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
                 val constructorParamAsUElement = constructorsParam.toUElement()
                 if (shouldReport && constructorParamAsUElement != null) {
                     context.report(
-                        CleanConstructorsRegistry.INJECT_ISSUE, method,
+                        INJECT_ISSUE, method,
                         context.getNameLocation(constructorParamAsUElement),
                         "Constructor with @Inject annotation injected object that has expensive constructor: $diGraph"
                     )
@@ -195,11 +193,56 @@ class CleanConstructorDetector : Detector(), UastScanner {
             diGraph: DependencyGraph
         ) {
             context.report(
-                CleanConstructorsRegistry.INJECT_ISSUE, constructor,
+                INJECT_ISSUE, constructor,
                 context.getNameLocation(param.toUElement()!!),
                 "Constructor with @Inject annotation injected object that has expensive constructor: $diGraph"
             )
         }
+    }
+
+    companion object {
+        /** Issue describing the problem and pointing to the detector implementation  */
+        val ISSUE = Issue.create(
+            // ID: used in @SuppressLint warnings etc
+            "ExpensiveConstructor",
+
+            // Title -- shown in the IDE's preference dialog, as category headers in the
+            // Analysis results window, etc
+            "Expensive constructors",
+
+            // Full explanation of the issue; you can use some markdown markup such as
+            // `monospace`, *italic*, and **bold**.
+            "This check highlights expensive constructor. " +
+                    "Constructors must only initiate fields\n",
+            Category.PERFORMANCE,
+            8,
+            Severity.WARNING,
+            Implementation(
+                CleanConstructorDetector::class.java,
+                Scope.JAVA_FILE_SCOPE
+            )
+        )
+
+        val INJECT_ISSUE = Issue.create(
+            // ID: used in @SuppressLint warnings etc
+            "InjectedExpensiveConstructor",
+
+            // Title -- shown in the IDE's preference dialog, as category headers in the
+            // Analysis results window, etc
+            "Injected expensive constructors",
+
+            // Full explanation of the issue; you can use some markdown markup such as
+            // `monospace`, *italic*, and **bold**.
+            "This check highlights injecting expensive constructor. " +
+                    "Need to use Lazy wrapper for this cases.",
+            Category.PERFORMANCE,
+            9,
+            Severity.WARNING,
+            Implementation(
+                CleanConstructorDetector::class.java,
+                Scope.JAVA_FILE_SCOPE
+            )
+        )
     }
 }
 

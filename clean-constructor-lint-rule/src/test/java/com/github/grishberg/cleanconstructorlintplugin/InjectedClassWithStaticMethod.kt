@@ -56,7 +56,7 @@ class InjectedClassWithStaticMethod {
     fun injectedClassHasExpensiveExpression() {
         TestLintTask.lint()
             .files(cleanConstructorClass, expensiveConstructorClass, testedClass1)
-            .issues(CleanConstructorsRegistry.ISSUE, CleanConstructorsRegistry.INJECT_ISSUE)
+            .issues(CleanConstructorDetector.ISSUE, CleanConstructorDetector.INJECT_ISSUE)
             .run()
             .expect(
                 """
@@ -98,7 +98,7 @@ src/com/test/TestedClass.java:6: Warning: Constructor has expensive method calls
       }"""
                 ).indented()
             )
-            .issues(CleanConstructorsRegistry.ISSUE, CleanConstructorsRegistry.INJECT_ISSUE)
+            .issues(CleanConstructorDetector.ISSUE, CleanConstructorDetector.INJECT_ISSUE)
             .run()
             .expect("No warnings.")
     }

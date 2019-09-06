@@ -13,7 +13,7 @@ class GetterTest {
                 LintDetectorTest.java(readFromResource("GetterUserClass.java")),
                 LintDetectorTest.java(readFromResource("SimpleProvider.java"))
             )
-            .issues(CleanConstructorsRegistry.ISSUE)
+            .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expect("No warnings.")
     }

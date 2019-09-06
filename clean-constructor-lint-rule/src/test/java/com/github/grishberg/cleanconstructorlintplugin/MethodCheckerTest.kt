@@ -5,6 +5,27 @@ import com.android.tools.lint.checks.infrastructure.TestLintTask
 import org.junit.Test
 
 class MethodCheckerTest {
+    private val observableInterface = LintDetectorTest.java(
+        """
+      package foo;
+      public interface ObservableInterface { 
+        void addListener(Runnable r);
+      }"""
+    ).indented()
+
+    private val superClass = LintDetectorTest.java(
+        """
+      package foo;
+      import java.util.ArrayList;
+      public class ParentClass {
+        private Runnable listener;
+        private boolean condition = false;
+        public void setSomeListener(Runnable r) {
+            listener = r;
+        }
+      }"""
+    ).indented()
+
     private val observable = LintDetectorTest.java(
         """
       package foo;
@@ -35,20 +56,98 @@ class MethodCheckerTest {
       }"""
     ).indented()
 
+    private val abstractObservable = LintDetectorTest.java(
+        """
+      package foo;
+      import java.util.ArrayList;
+      public abstract class SomeObservable {
+        private Runnable listener;
+        private boolean condition = false;
+        private final ArrayList<Runnable> observers = new ArrayList<>();
+        public void setSomeListener(Runnable r) {
+            listener = r;
+        }
+        
+        public void addObserver(Runnable r) {
+            observers.add(r);
+            invalidateListeningState();
+        }
+        
+        protected abstract void invalidateListeningState();
+      }"""
+    ).indented()
+
+    private val observableWithStateInvalidation = LintDetectorTest.java(
+        """
+      package foo;
+      import java.util.ArrayList;
+      public class UpdateListener {
+        private ArrayList<Runnable> listener = new ArrayList<>();
+        private boolean isUpdateListening;
+        private boolean isDestroyed;
+        private final SomeObservable observable;
+        private final UpdateListener listener = new UpdateListener();
+        public UpdateListener(SomeObservable o) {
+            observable = o;
+            invalidateState();
+        }
+        
+        public void addListener(Runnable r) {
+            listener.add(r);
+            invalidateState();
+        }
+        
+        private void invalidateState() {
+            if (shouldListening()) {
+                return;
+            }
+            if (isUpdateListening || isDestroyed) {
+                return;
+            }
+            isUpdateListening = true;
+
+            observable.addObserver(listener);
+        }
+        
+        private boolean shouldListening() {
+            return !listener.isEmpty();
+        }
+        
+        private class UpdateListener implements Runnable {
+            @Override
+            public void run() {
+                // do something.
+            }
+        }
+      }"""
+    ).indented()
+
+    @Test
+    fun allowedIfExpression() {
+        TestLintTask.lint()
+            .files(abstractObservable, observableWithStateInvalidation)
+            .issues(CleanConstructorDetector.ISSUE)
+            .run()
+            .expectClean()
+    }
+
     @Test
     fun allowedSetters() {
         TestLintTask.lint()
             .files(
-                observable,
+                observable, observableInterface,
                 LintDetectorTest.java(
                     """
           package foo;
+          
           class Example {
             
-            public Example(SomeObservable observable) {
+            public Example(SomeObservable observable, ObservableInterface observableInterface) {
                 observable.setSomeListener(new Listener());
                 observable.addObserver(new Listener());
                 observable.addSmartObserver(new Listener());
+                
+                observableInterface.addListener(new Listener());
             }
             
             private class Listener implements Runnable {
@@ -58,10 +157,61 @@ class MethodCheckerTest {
                 }
             }
             
-          }"""
-                ).indented()
-            )
-            .issues(CleanConstructorsRegistry.ISSUE)
+          }""").indented())
+            .issues(CleanConstructorDetector.ISSUE)
+            .run()
+            .expectClean()
+    }
+
+    @Test
+    fun allowedSetterInAbstractClass() {
+        TestLintTask.lint()
+            .files(
+                observableInterface,
+                LintDetectorTest.java(
+                    """
+          package foo;
+          abstract class Example<C extends ObservableInterface> {
+            public Example(C observable) {
+                observable.addListener(new Listener());
+            }
+            
+            private class Listener implements Runnable {
+                @Override
+                public void run() {
+                    System.out.println(100500);
+                }
+            }
+            
+          }""").indented())
+            .issues(CleanConstructorDetector.ISSUE)
+            .run()
+            .expectClean()
+    }
+
+    @Test
+    fun allowedSettersFromSuper() {
+        TestLintTask.lint()
+            .files(
+                superClass,
+                LintDetectorTest.java(
+                    """
+          package foo;
+          class Example extends ParentClass {
+            
+            public Example() {
+                setSomeListener(new Listener());
+            }
+            
+            private class Listener implements Runnable {
+                @Override
+                public void run() {
+                    System.out.println(100500);
+                }
+            }
+            
+          }""").indented())
+            .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expectClean()
     }
@@ -84,10 +234,8 @@ class MethodCheckerTest {
                 System.out.println(100500);
             }
                 
-          }"""
-                ).indented()
-            )
-            .issues(CleanConstructorsRegistry.ISSUE)
+          }""").indented())
+            .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expect(
                 """
@@ -95,8 +243,7 @@ src/foo/Example.java:4: Warning: Constructor has expensive method calls: addExpe
       observable.addExpensiveObserver(this);
                  ~~~~~~~~~~~~~~~~~~~~
 0 errors, 1 warnings
-            """.trimIndent()
-            )
+            """.trimIndent())
     }
 
     @Test
@@ -133,10 +280,62 @@ src/foo/Example.java:4: Warning: Constructor has expensive method calls: addExpe
                 return f1 && f2 && (getBooleanExpr1() || getBooleanExpr2());
             }
             
-          }"""
-                ).indented()
-            )
-            .issues(CleanConstructorsRegistry.ISSUE)
+          }""").indented())
+            .issues(CleanConstructorDetector.ISSUE)
+            .run()
+            .expectClean()
+    }
+
+    @Test
+    fun allowedEqualsInConstructor() {
+        TestLintTask.lint()
+            .files(
+                observable,
+                LintDetectorTest.java(
+                    """
+          package foo;
+          class Example {
+            private static final String CONST = "value1";
+            private final boolean f1;
+            public Example() {
+                f1 = CONST.equals("val");
+            }
+          }""").indented())
+            .issues(CleanConstructorDetector.ISSUE)
+            .run()
+            .expectClean()
+    }
+
+    @Test
+    fun ignoreMethodsInIf() {
+        TestLintTask.lint()
+            .files(
+                observable, observableWithStateInvalidation,
+                LintDetectorTest.java(
+                    """
+          package foo;
+          import java.util.ArrayList;
+          import java.util.List;
+          import java.util.Collections;
+          class Example {
+            private ArrayList<String> cache;
+            private List<String> pages;
+            public Example(UpdateListener ul) {
+                ul.addListener(new Runnable(){
+                    @Override
+                    public void run() { }
+                });
+                pages = getPages();
+            }
+            
+            List<String> getPages() {
+                return cache == null ?
+                Collections.emptyList() :
+                new ArrayList<>(cache);
+            }
+          }
+          """).indented())
+            .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expectClean()
     }

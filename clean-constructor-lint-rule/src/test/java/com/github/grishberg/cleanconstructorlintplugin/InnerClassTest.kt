@@ -12,7 +12,7 @@ class InnerClassTest {
             .files(
                 LintDetectorTest.java(readFromResource("SampleInnerClass.java"))
             )
-            .issues(CleanConstructorsRegistry.ISSUE)
+            .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expect(
                 """

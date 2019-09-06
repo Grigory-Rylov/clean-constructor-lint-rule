@@ -16,7 +16,7 @@ class ConstructorsTest {
                 java(readFromResource("ItemViewHolder.java")),
                 java(readFromResource("RecycableViewHolder.java"))
             )
-            .issues(CleanConstructorsRegistry.ISSUE, CleanConstructorsRegistry.INJECT_ISSUE)
+            .issues(CleanConstructorDetector.ISSUE, CleanConstructorDetector.INJECT_ISSUE)
             .run()
             .expect("No warnings.")
     }
@@ -34,7 +34,7 @@ class ConstructorsTest {
                 java(readFromResource("MainActivity.java")),
                 java(readFromResource("AdapterDelegate.java"))
             )
-            .issues(CleanConstructorsRegistry.ISSUE, CleanConstructorsRegistry.INJECT_ISSUE)
+            .issues(CleanConstructorDetector.ISSUE, CleanConstructorDetector.INJECT_ISSUE)
             .run()
             .expect("No warnings.")
     }

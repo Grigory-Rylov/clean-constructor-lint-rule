@@ -2,17 +2,48 @@ package com.github.grishberg.cleanconstructorlintplugin
 
 import com.android.tools.lint.detector.api.JavaContext
 import com.android.tools.lint.detector.api.TypeEvaluator
+import com.github.grishberg.cleanconstructorlintplugin.ignore.IgnoredSupertypes
+import com.github.grishberg.cleanconstructorlintplugin.ignore.IgnoredTypes
 import com.intellij.psi.PsiModifier
+import com.intellij.psi.PsiModifierList
 import com.intellij.psi.PsiType
-import org.jetbrains.uast.UCallExpression
-import org.jetbrains.uast.UClass
-import org.jetbrains.uast.UElement
-import org.jetbrains.uast.UMethod
+import org.jetbrains.uast.*
 
-class ClassMembersChecks {
+class ClassMembersChecks(
+    private val context: JavaContext
+) {
+    /**
+     * return {@code true} if current method is allowed in {@link IgnoredTypes}.
+     */
     fun isAllowedMethod(expression: UMethod): Boolean {
         val methodName = expression.name
-        return isAllowedIdentifier(methodName)
+        if (isAllowedIdentifier(methodName)) {
+            return true
+        }
+
+        return isExcludedTypeInExpression(expression)
+    }
+
+    /**
+     * recursively searches excluded method in subtypes.
+     */
+    private fun isExcludedTypeInExpression(expression: UMethod): Boolean {
+        val psiClass = expression.containingClass ?: return false
+        val uClass = context.uastContext.getClass(psiClass)
+        val typeName = uClass.qualifiedName
+
+        val allowedMethodsOfClass = IgnoredTypes.TYPES[typeName]
+        if (allowedMethodsOfClass != null) {
+            if (allowedMethodsOfClass.isEmpty() || allowedMethodsOfClass.contains(expression.name)) {
+                return true
+            }
+        }
+        for (subtype in uClass.superTypes) {
+            if (isAllowedType(subtype, expression.name)) {
+                return true
+            }
+        }
+        return false
     }
 
     fun isAllowedIdentifier(elementName: String): Boolean {
@@ -33,7 +64,7 @@ class ClassMembersChecks {
     fun isIgnoredSupertype(node: UClass, context: JavaContext): Boolean {
         for (superType in node.uastSuperTypes) {
             val name = superType.getQualifiedName() ?: superType.toString()
-            if (IGNORED_PARENTS.contains(name)) {
+            if (IgnoredSupertypes.IGNORED_PARENTS.contains(name)) {
                 return true
             } else {
                 val className = superType.getQualifiedName() ?: continue
@@ -52,50 +83,69 @@ class ClassMembersChecks {
         return modifiers.hasModifierProperty(PsiModifier.PRIVATE)
     }
 
-    companion object {
-        private val ACCEPTED_METHODS = listOf("this", "super")
-
-        private val IGNORED_PARENTS = listOf(
-            "android.graphics.drawable.Drawable",
-            "android.view.View",
-            "android.support.v7.widget.RecyclerView.ViewHolder",
-            "androidx.recyclerview.widget.RecyclerView.ViewHolder",
-            "RecyclerView.ViewHolder"
-        )
-
-        private val IGNORED_TYPES = listOf(
-            "java.util.Collection",
-            "java.util.Map",
-            "android.support.v4.util.SparseArrayCompat",
-            "android.util.SparseIntArray",
-            "androidx.lifecycle.ViewModel",
-            "SparseArrayCompat"
-        )
-
-        fun isExcludedClassInExpression(node: UCallExpression): Boolean {
-            val type: PsiType = TypeEvaluator.evaluate(node.receiver) ?: return false
-            return isAvailableType(type)
+    /**
+     * return {@code true} if current class.method is exists in IgnoredTypes.TYPES.
+     */
+    fun isExcludedClassInExpression(expression: UCallExpression): Boolean {
+        val receiver = expression.receiver
+        val methodName = expression.methodName ?: return false
+        val method = expression.resolveToUElement()
+        if (method is UMethod && isAllowedMethod(method)) {
+            return true
         }
+        val type: PsiType? = TypeEvaluator.evaluate(receiver)
+        if (type != null) {
+            return isAllowedType(type, methodName)
+        }
+        return false
+    }
 
-        private fun isAvailableType(type: PsiType): Boolean {
-            val typeName = extractTypeWithoutGenericSubtype(type.getCanonicalText(false))
-            if (IGNORED_TYPES.contains(typeName)) {
+    private fun isAllowedType(type: PsiType, methodName: String): Boolean {
+        val typeName = extractRawType(type.getCanonicalText(false))
+        if (isAllowedMethodForType(typeName, methodName)) {
+            return true
+        }
+        for (subtype in type.superTypes) {
+            if (isAllowedType(subtype, methodName)) {
                 return true
             }
-            for (subtype in type.superTypes) {
-                if (isAvailableType(subtype)) {
-                    return true
-                }
-            }
-            return false
         }
+        return false
+    }
 
-        private fun extractTypeWithoutGenericSubtype(name: String): String {
-            val pos = name.indexOf("<")
-            if (pos > 0) {
-                return name.substring(0, pos)
+    private fun isAllowedMethodForType(typeName: String, methodName: String): Boolean {
+        val allowedMethodsOfClass = IgnoredTypes.TYPES[typeName]
+        if (allowedMethodsOfClass != null) {
+            if (allowedMethodsOfClass.isEmpty() || allowedMethodsOfClass.contains(methodName)) {
+                return true
             }
-            return name
         }
+        return false
+    }
+
+    private fun extractRawType(name: String): String {
+        val pos = name.indexOf("<")
+        if (pos > 0) {
+            return name.substring(0, pos)
+        }
+        return name
+    }
+
+    fun isAbstractClass(uClass: UClass): Boolean {
+        val modifierList = uClass.modifierList ?: return false
+        return hasAbstractModifier(modifierList)
+    }
+
+    fun isAbstractMethod(uMethod: UMethod): Boolean {
+        val modifierList = uMethod.modifierList
+        return hasAbstractModifier(modifierList)
+    }
+
+    private fun hasAbstractModifier(modifierList: PsiModifierList) =
+        modifierList.hasModifierProperty(PsiModifier.ABSTRACT)
+
+
+    companion object {
+        private val ACCEPTED_METHODS = listOf("this", "super")
     }
 }

@@ -110,7 +110,7 @@ class RecursiveInjectedConstructorDetectorTest {
         lint()
             .files(expensiveConstructorClass3, expensiveConstructorClass2, expensiveConstructorClass,
                 expensiveConstructor2Class, injectedConstructorClass3)
-            .issues(CleanConstructorsRegistry.ISSUE, CleanConstructorsRegistry.INJECT_ISSUE)
+            .issues(CleanConstructorDetector.ISSUE, CleanConstructorDetector.INJECT_ISSUE)
             .run()
             .expect(
                 """
@@ -142,7 +142,7 @@ src/com/test/ExpensiveConstructor2.java:4: Warning: Constructor has expensive me
     fun injectedClassHasExpensiveExpression() {
         lint()
             .files(expensiveExpressionClass, injectedExpensiveExpression, expensiveConstructorClass)
-            .issues(CleanConstructorsRegistry.ISSUE, CleanConstructorsRegistry.INJECT_ISSUE)
+            .issues(CleanConstructorDetector.ISSUE, CleanConstructorDetector.INJECT_ISSUE)
             .run()
             .expect(
                 """
