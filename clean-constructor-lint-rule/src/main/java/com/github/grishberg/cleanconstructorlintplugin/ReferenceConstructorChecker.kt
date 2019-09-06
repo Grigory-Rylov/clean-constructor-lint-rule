@@ -19,7 +19,9 @@ class ReferenceConstructorChecker(
         if (membersChecks.isCallInAnonymousClass(call)) {
             return false
         }
-        if (membersChecks.isIgnoredSupertype(call.getContainingUClass() as UClass, context)) {
+
+        val uClass = call.getContainingUClass() as UClass
+        if (membersChecks.isIgnoredSupertype(uClass, context)) {
             return false
         }
         if (call.isMethodCall()) {

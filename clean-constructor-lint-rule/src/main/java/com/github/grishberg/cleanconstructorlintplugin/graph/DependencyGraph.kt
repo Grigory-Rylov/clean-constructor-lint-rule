@@ -4,7 +4,7 @@ package com.github.grishberg.cleanconstructorlintplugin.graph
  * Contains info about chain of dependencies.
  */
 class DependencyGraph(private val rootClass: String) {
-    private val elements = mutableListOf<String>()
+    private val elements = LinkedHashSet<String>()
 
     fun addElement(className: String) {
         elements.add(className)
@@ -19,9 +19,9 @@ class DependencyGraph(private val rootClass: String) {
 
     override fun toString(): String {
         val sb = StringBuilder()
-        for (i in 0 until elements.size) {
-            sb.append(elements[i])
-            if (i < elements.size - 1) {
+        for ((pos, element) in elements.withIndex()) {
+            sb.append(element)
+            if (pos < elements.size - 1) {
                 sb.append(" -> ")
             }
         }

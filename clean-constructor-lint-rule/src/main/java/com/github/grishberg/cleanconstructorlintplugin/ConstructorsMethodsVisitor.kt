@@ -15,7 +15,11 @@ class ConstructorsMethodsVisitor(
         if (excludedClasses.isCallInAnonymousClass(node)) {
             return false
         }
-        if (excludedClasses.isIgnoredSupertype(node.getContainingUClass() as UClass, context)) {
+        val uClass = node.getContainingUClass() as UClass
+        if (excludedClasses.isPrivateClass(uClass)) {
+            return false
+        }
+        if (excludedClasses.isIgnoredSupertype(uClass, context)) {
             return false
         }
         if (ClassMembersChecks.isExcludedClassInExpression(node)) {

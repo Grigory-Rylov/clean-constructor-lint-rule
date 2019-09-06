@@ -2,6 +2,7 @@ package com.github.grishberg.cleanconstructorlintplugin
 
 import com.android.tools.lint.detector.api.JavaContext
 import com.android.tools.lint.detector.api.TypeEvaluator
+import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiType
 import org.jetbrains.uast.UCallExpression
 import org.jetbrains.uast.UClass
@@ -15,15 +16,7 @@ class ClassMembersChecks {
     }
 
     fun isAllowedIdentifier(elementName: String): Boolean {
-        if (ACCEPTED_METHODS.contains(elementName)) {
-            return true
-        }
-        for (reg in REGEX_LISTENERS) {
-            if (reg.find(elementName) != null) {
-                return true
-            }
-        }
-        return false
+        return ACCEPTED_METHODS.contains(elementName)
     }
 
     fun isCallInAnonymousClass(node: UCallExpression): Boolean {
@@ -54,6 +47,11 @@ class ClassMembersChecks {
         return false
     }
 
+    fun isPrivateClass(uClass: UClass): Boolean {
+        val modifiers = uClass.modifierList ?: return false
+        return modifiers.hasModifierProperty(PsiModifier.PRIVATE)
+    }
+
     companion object {
         private val ACCEPTED_METHODS = listOf("this", "super")
 
@@ -65,45 +63,30 @@ class ClassMembersChecks {
             "RecyclerView.ViewHolder"
         )
 
-        private val REGEX_LISTENERS = listOf(
-            "add\\w*Action".toRegex(),
-            "register\\w*Action".toRegex(),
-            "remove\\w*Action".toRegex(),
-            "unregister\\w*Action".toRegex(),
-            "add\\w*Listener".toRegex(),
-            "add\\w*Observer".toRegex(),
-            "remove\\w*Observer".toRegex(),
-            "set\\w*Listener".toRegex(),
-            "register\\w*Listener".toRegex(),
-            "register\\w*Observer".toRegex(),
-            "unregister\\w*Listener".toRegex(),
-            "unregister\\w*Observer".toRegex()
-        )
-
         private val IGNORED_TYPES = listOf(
-            "java.util.AbstractMap",
-            "java.util.AbstractList",
-            "java.util.List",
+            "java.util.Collection",
             "java.util.Map",
             "android.support.v4.util.SparseArrayCompat",
             "android.util.SparseIntArray",
+            "androidx.lifecycle.ViewModel",
             "SparseArrayCompat"
         )
 
         fun isExcludedClassInExpression(node: UCallExpression): Boolean {
-            val type: PsiType? = TypeEvaluator.evaluate(node.receiver)
-            if (type != null) {
-                val typeName = extractTypeWithoutGenericSubtype(type.getCanonicalText(false))
-                if (IGNORED_TYPES.contains(typeName)) {
+            val type: PsiType = TypeEvaluator.evaluate(node.receiver) ?: return false
+            return isAvailableType(type)
+        }
+
+        private fun isAvailableType(type: PsiType): Boolean {
+            val typeName = extractTypeWithoutGenericSubtype(type.getCanonicalText(false))
+            if (IGNORED_TYPES.contains(typeName)) {
+                return true
+            }
+            for (subtype in type.superTypes) {
+                if (isAvailableType(subtype)) {
                     return true
                 }
-                for (subtype in type.superTypes) {
-                    if (IGNORED_TYPES.contains(subtype.getCanonicalText(false))) {
-                        return true
-                    }
-                }
             }
-
             return false
         }
 

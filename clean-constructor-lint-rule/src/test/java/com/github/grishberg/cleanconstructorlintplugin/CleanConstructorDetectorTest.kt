@@ -30,9 +30,8 @@ class CleanConstructorDetectorTest {
         public SimpleParent() {
             // empty
         }
-        public void getDrawable(int id) {}
-        public void getColor(int id) {}
-        public void getColorStateList(int id) {}
+        public int getDrawableRes(int id) { return 1;}
+        public int getColor(int id) { return 0xFFFFFF; }
       }"""
     ).indented()
 
@@ -46,13 +45,12 @@ class CleanConstructorDetectorTest {
           import android.content.res.Resources;
           class Example {
             private SomeAnotherClass anotherClass;
-            public Example() {
-                foo();
+            public Example(Resources res) {
+                foo(res);
                 anotherClass.slowMethod();
             }
 
-            public void foo() {
-              Resources resources = null;
+            public void foo(Resources resources) {
               resources.getDrawable(0);
             }
           }"""
@@ -63,7 +61,7 @@ class CleanConstructorDetectorTest {
             .expect(
                 """
 src/foo/Example.java:6: Warning: Constructor has expensive method calls: foo [ExpensiveConstructor]
-      foo();
+      foo(res);
       ~~~
 src/foo/Example.java:7: Warning: Constructor has expensive method calls: slowMethod [ExpensiveConstructor]
       anotherClass.slowMethod();
@@ -75,7 +73,7 @@ src/foo/Example.java:7: Warning: Constructor has expensive method calls: slowMet
     }
 
     @Test
-    fun constructorHasRegisterObserverMethodCalls() {
+    fun notWarningWhenCallSuperInConstructor() {
         lint()
             .files(
                 simpleParentClass,
@@ -83,14 +81,11 @@ src/foo/Example.java:7: Warning: Constructor has expensive method calls: slowMet
                     """
           package foo;
           class Example extends SimpleParent{
-            private SomeAnotherClass anotherClass;
             public Example() {
                 super();
             }
-            public Example() {
+            public Example(Runnable r) {
                 this();
-                anotherClass.addObserver(new SomeListener());
-                anotherClass.setListener(this);
             }
           }"""
                 ).indented()
@@ -109,10 +104,8 @@ src/foo/Example.java:7: Warning: Constructor has expensive method calls: slowMet
           package foo;
           import com.test.ExpensiveConstructor;
           class Example {
-            private SomeAnotherClass anotherClass;
             public Example() {
                 ExpensiveConstructor val = new ExpensiveConstructor();
-                anotherClass.addObserver(val);
             }
           }"""
                 ).indented()
@@ -121,7 +114,7 @@ src/foo/Example.java:7: Warning: Constructor has expensive method calls: slowMet
             .run()
             .expect(
                 """
-src/foo/Example.java:6: Warning: Constructor creates object that has expensive constructor: Example [ExpensiveConstructor]
+src/foo/Example.java:5: Warning: Constructor creates object that has expensive constructor: Example [ExpensiveConstructor]
       ExpensiveConstructor val = new ExpensiveConstructor();
                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~
 src/com/test/ExpensiveConstructor.java:5: Warning: Constructor has expensive method calls: getDrawable [ExpensiveConstructor]
