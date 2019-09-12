@@ -6,7 +6,6 @@ import com.android.tools.lint.detector.api.Detector.UastScanner
 import com.github.grishberg.cleanconstructorlintplugin.graph.DependencyGraph
 import com.github.grishberg.cleanconstructorlintplugin.graph.ExpensiveConstructorsRepository
 import org.jetbrains.uast.*
-import org.jetbrains.uast.util.isConstructorCall
 
 
 /**
@@ -30,10 +29,23 @@ class CleanConstructorDetector : Detector(), UastScanner {
     ) : UElementHandler() {
 
         override fun visitCallExpression(expr: UCallExpression) {
-            if (!expr.isConstructorCall()) {
+            if (!isCallInsideConstructorOrFieldDeclaration(expr.uastParent)) {
                 return
             }
             checkConstructorsOfConstructorCall(expr)
+        }
+
+        private fun isCallInsideConstructorOrFieldDeclaration(parent: UElement?): Boolean {
+            if (parent == null) {
+                return false
+            }
+            if (parent is UMethod && parent.isConstructor) {
+                return true
+            }
+            if (parent is UField) {
+                return true
+            }
+            return isCallInsideConstructorOrFieldDeclaration(parent.uastParent)
         }
 
         private fun checkConstructorsOfConstructorCall(call: UCallExpression) {
@@ -113,7 +125,11 @@ class CleanConstructorDetector : Detector(), UastScanner {
             constructorsParam: UParameter
         ): Boolean {
             var hasExpensiveConstructor = false
-            val injectedClassName: String = constructorsParam.typeReference?.getQualifiedName() ?: return false
+
+            val parameterWrapper = ParameterWrapper(membersChecks, constructorsParam)
+            val uClass = parameterWrapper.uClass ?: return false
+
+            val injectedClassName: String = uClass.qualifiedName ?: return false
             val diGraph: DependencyGraph = parentDiGraph ?: DependencyGraph(
                 constructor.name
             )
@@ -123,8 +139,6 @@ class CleanConstructorDetector : Detector(), UastScanner {
             }
             //TODO: check cache of expensive classes.
             // check parameter's constructor
-            val clazz = context.evaluator.findClass(injectedClassName) ?: return false
-            val uClass = context.uastContext.getClass(clazz)
 
             var paramConstructorHasExpensiveMethod = false
             for (parameterClassMethod in uClass.methods) {

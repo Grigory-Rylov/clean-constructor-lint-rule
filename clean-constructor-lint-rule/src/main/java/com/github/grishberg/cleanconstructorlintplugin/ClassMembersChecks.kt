@@ -123,7 +123,7 @@ class ClassMembersChecks(
         return false
     }
 
-    private fun extractRawType(name: String): String {
+    fun extractRawType(name: String): String {
         val pos = name.indexOf("<")
         if (pos > 0) {
             return name.substring(0, pos)
@@ -144,6 +144,10 @@ class ClassMembersChecks(
     private fun hasAbstractModifier(modifierList: PsiModifierList) =
         modifierList.hasModifierProperty(PsiModifier.ABSTRACT)
 
+    fun findUClassByName(fullClassName: String): UClass? {
+        val clazz = context.evaluator.findClass(fullClassName) ?: return null
+        return context.uastContext.getClass(clazz)
+    }
 
     companion object {
         private val ACCEPTED_METHODS = listOf("this", "super")

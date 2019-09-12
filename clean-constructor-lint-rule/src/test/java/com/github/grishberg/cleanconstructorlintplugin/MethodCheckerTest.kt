@@ -157,7 +157,9 @@ class MethodCheckerTest {
                 }
             }
             
-          }""").indented())
+          }"""
+                ).indented()
+            )
             .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expectClean()
@@ -183,7 +185,9 @@ class MethodCheckerTest {
                 }
             }
             
-          }""").indented())
+          }"""
+                ).indented()
+            )
             .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expectClean()
@@ -210,7 +214,9 @@ class MethodCheckerTest {
                 }
             }
             
-          }""").indented())
+          }"""
+                ).indented()
+            )
             .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expectClean()
@@ -234,7 +240,9 @@ class MethodCheckerTest {
                 System.out.println(100500);
             }
                 
-          }""").indented())
+          }"""
+                ).indented()
+            )
             .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expect(
@@ -243,7 +251,8 @@ src/foo/Example.java:4: Warning: Constructor has expensive method calls: addExpe
       observable.addExpensiveObserver(this);
                  ~~~~~~~~~~~~~~~~~~~~
 0 errors, 1 warnings
-            """.trimIndent())
+            """.trimIndent()
+            )
     }
 
     @Test
@@ -280,7 +289,9 @@ src/foo/Example.java:4: Warning: Constructor has expensive method calls: addExpe
                 return f1 && f2 && (getBooleanExpr1() || getBooleanExpr2());
             }
             
-          }""").indented())
+          }"""
+                ).indented()
+            )
             .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expectClean()
@@ -300,7 +311,9 @@ src/foo/Example.java:4: Warning: Constructor has expensive method calls: addExpe
             public Example() {
                 f1 = CONST.equals("val");
             }
-          }""").indented())
+          }"""
+                ).indented()
+            )
             .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expectClean()
@@ -310,7 +323,7 @@ src/foo/Example.java:4: Warning: Constructor has expensive method calls: addExpe
     fun ignoreMethodsInIf() {
         TestLintTask.lint()
             .files(
-                observable, observableWithStateInvalidation,
+                /*observable, observableWithStateInvalidation,*/
                 LintDetectorTest.java(
                     """
           package foo;
@@ -320,11 +333,11 @@ src/foo/Example.java:4: Warning: Constructor has expensive method calls: addExpe
           class Example {
             private ArrayList<String> cache;
             private List<String> pages;
-            public Example(UpdateListener ul) {
-                ul.addListener(new Runnable(){
-                    @Override
-                    public void run() { }
-                });
+            public Example(/*UpdateListener ul*/) {
+               // ul.addListener(new Runnable(){
+               //     @Override
+               //     public void run() { }
+               // });
                 pages = getPages();
             }
             
@@ -334,9 +347,96 @@ src/foo/Example.java:4: Warning: Constructor has expensive method calls: addExpe
                 new ArrayList<>(cache);
             }
           }
-          """).indented())
+          """
+                ).indented()
+            )
             .issues(CleanConstructorDetector.ISSUE)
             .run()
             .expectClean()
+    }
+
+    @Test
+    fun allowFor() {
+        TestLintTask.lint()
+            .files(
+                LintDetectorTest.java(
+                    """
+          package foo;
+          class Example {
+            public Example(UpdateListener ul) {
+                init();
+            }
+            
+            private void init() {
+                int counter = 0;
+                for(int i = 0; i<100; i++) {
+                    counter++;
+                }
+            }
+          }
+          """
+                ).indented()
+            )
+            .issues(CleanConstructorDetector.ISSUE)
+            .run()
+            .expectClean()
+    }
+
+    @Test
+    fun allowArrayAccess() {
+        TestLintTask.lint()
+            .files(
+                LintDetectorTest.java(
+                    """
+          package foo;
+          class Example {
+            public Example(UpdateListener ul) {
+                init();
+            }
+            
+            private void init() {
+                int[] a = new int[100];
+                int firstElement = a[0];
+            }
+          }
+          """
+                ).indented()
+            )
+            .issues(CleanConstructorDetector.ISSUE)
+            .run()
+            .expectClean()
+    }
+
+    @Test
+    fun dontAllowForWithExpensiveBody() {
+        TestLintTask.lint()
+            .files(
+                LintDetectorTest.java(
+                    """
+          package foo;
+          class Example {
+            public Example(UpdateListener ul) {
+                init();
+            }
+            
+            private void init() {
+                int counter = 0;
+                for(int i = 0; i<100; i++) {
+                    counter++;
+                    Thread.sleep(1000);
+                }
+            }
+          }
+          """
+                ).indented()
+            )
+            .issues(CleanConstructorDetector.ISSUE)
+            .run()
+            .expect("""
+src/foo/Example.java:4: Warning: Constructor has expensive method calls: init [ExpensiveConstructor]
+      init();
+      ~~~~
+0 errors, 1 warnings
+            """.trimIndent())
     }
 }

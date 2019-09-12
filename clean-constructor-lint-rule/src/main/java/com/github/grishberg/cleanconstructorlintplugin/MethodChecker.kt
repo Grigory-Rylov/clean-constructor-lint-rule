@@ -1,8 +1,8 @@
 package com.github.grishberg.cleanconstructorlintplugin
 
 import com.android.tools.lint.detector.api.JavaContext
-import com.intellij.psi.PsiModifier
 import org.jetbrains.uast.*
+import org.jetbrains.uast.util.isConstructorCall
 import org.jetbrains.uast.util.isMethodCall
 import org.jetbrains.uast.visitor.AbstractUastVisitor
 
@@ -139,82 +139,73 @@ class MethodChecker(
             return true
         }
 
-        private fun isAvailableExpression(expr: UExpression): Boolean {
-            if (expr is ULiteralExpression) {
+        private fun isAvailableExpression(expr: UExpression?): Boolean {
+            if (expr == null) {
                 return true
             }
-
-            if (expr is USimpleNameReferenceExpression) {
-                return true
+            return when (expr) {
+                is UastEmptyExpression,
+                is ULiteralExpression,
+                is USimpleNameReferenceExpression -> true
+                is UPrefixExpression -> isAvailableExpression(expr.operand)
+                is UPostfixExpression -> isAvailableExpression(expr.operand)
+                is UBinaryExpression -> isAvailableBinaryExpression(expr)
+                is UPolyadicExpression -> isAvailablePolyadicExpression(expr)
+                is UCallExpression -> isAvailableCallExpression(expr)
+                is UParenthesizedExpression -> isAvailableExpression(expr.expression)
+                is UIfExpression -> isAvailableIfExpression(expr)
+                is UBlockExpression -> isAvailableBlockExpression(expr)
+                is UReturnExpression -> {
+                    val returnExpression = expr.returnExpression ?: return true
+                    return isAvailableExpression(returnExpression)
+                }
+                is UQualifiedReferenceExpression -> return isAvailableQualifiedReferenceExpression(expr)
+                is UDeclarationsExpression -> return isAvailableDeclarationsExpression(expr)
+                is UForExpression -> return isAvailableForExpression(expr)
+                is UForEachExpression -> return isAvailableForEachExpression(expr)
+                else -> return false
             }
 
-            if (expr is UPrefixExpression) {
-                return isAvailableExpression(expr.operand)
-            }
+        }
 
-            if (expr is UBinaryExpression) {
-                return isAvailableBinaryExpression(expr)
-            }
-
-            if (expr is UPolyadicExpression) {
-                return isAvailablePolyadicExpression(expr)
-            }
-
-            if (expr is UCallExpression) {
-                return isAvailableCallExpression(expr)
-            }
-
-            if (expr is UParenthesizedExpression) {
-                return isAvailableExpression(expr.expression)
-            }
-
-            if (expr is UIfExpression) {
-                return isAvailableIfExpression(expr)
-            }
-
-            if (expr is UBlockExpression) {
-                return isAvailableBlockExpression(expr)
-            }
-
-            if (expr is UReturnExpression) {
-                val returnExpression = expr.returnExpression ?: return true
-                return isAvailableExpression(returnExpression)
-            }
-
-            if (expr is UQualifiedReferenceExpression) {
-                return isAvailableQualifiedReferenceExpression(expr)
-            }
-            if (expr is UDeclarationsExpression) {
-                return isAvailableDeclarationsExpression(expr)
-            }
-            if (expr is UIfExpression) {
-                return isAvailableIfExpression(expr)
+        private fun isAvailableForEachExpression(expr: UForEachExpression): Boolean {
+            if (!isAvailableExpression(expr.body)) {
+                return false
             }
             return false
+        }
+
+        private fun isAvailableForExpression(expr: UForExpression): Boolean {
+            if (!isAvailableExpression(expr.condition)) {
+                return false
+            }
+            if (!isAvailableExpression(expr.declaration)) {
+                return false
+            }
+            if (!isAvailableExpression(expr.update)) {
+                return false
+            }
+            if (!isAvailableExpression(expr.body)) {
+                return false
+            }
+            return true
         }
 
         private fun isAvailableIfExpression(expr: UIfExpression): Boolean {
             if (!isAvailableExpression(expr.condition)) {
                 return false
             }
-            val thenExpression = expr.thenExpression
-            val elseExpression = expr.thenExpression
-            if (thenExpression != null) {
-                if (!isAvailableExpression(thenExpression)) {
-                    return false
-                }
+            if (!isAvailableExpression(expr.thenExpression)) {
+                return false
             }
-
-            if (elseExpression != null) {
-                if (!isAvailableExpression(elseExpression)) {
-                    return false
-                }
+            if (!isAvailableExpression(expr.elseExpression)) {
+                return false
             }
             return true
         }
 
         private fun isAvailableCallExpression(expr: UCallExpression): Boolean {
-            if (!expr.isMethodCall()) {
+            if (!expr.isMethodCall() && !expr.isConstructorCall()) {
                 return false
             }
             val methodCall = expr.resolveToUElement() as? UMethod ?: return false
