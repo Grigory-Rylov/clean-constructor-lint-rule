@@ -1,15 +1,31 @@
 package com.github.grishberg.cleanconstructorlintplugin.graph
 
-class DependencyNode(val name: String, var isExpensive: Boolean) {
+class DependencyNode(
+    val name: String,
+    parentNode: DependencyNode? = null
+) {
+    private val path = LinkedHashSet<String>()
+    private val children = mutableListOf<DependencyNode>()
 
-    val children = mutableListOf<DependencyNode>()
-        get() = ArrayList(field)
-
-    fun addInjectedClass(injectedClass: DependencyNode) {
-        children.add(injectedClass)
+    init {
+        if (parentNode != null) {
+            path.addAll(parentNode.path)
+        }
+        path.add(name)
     }
 
-    fun hasElement(element: DependencyNode) : Boolean = children.contains(element)
+    fun addChild(injectedClass: DependencyNode) {
+        children.add(injectedClass)
+        injectedClass.addRootPath(path)
+    }
+
+    private fun addRootPath(rootPath: LinkedHashSet<String>) {
+        path.clear()
+        path.addAll(rootPath)
+        path.add(name)
+    }
+
+    fun hasElement(element: DependencyNode): Boolean = path.contains(element.name)
 
     override fun equals(other: Any?): Boolean {
         if (other !is DependencyNode) {
@@ -23,13 +39,31 @@ class DependencyNode(val name: String, var isExpensive: Boolean) {
     }
 
     override fun toString(): String {
+        return "{name = " + name + ", children count = " + children.size + "}"
+    }
+
+    fun printPath(sb: InjectedIssueString) {
+        if (children.isEmpty()) {
+            doPrintPath(sb)
+            return
+        }
+
+        for (node in children) {
+            node.printPath(sb)
+        }
+    }
+
+    private fun doPrintPath(stringCollection: InjectedIssueString) {
         val sb = StringBuilder()
-        for (i in 0 until children.size) {
-            sb.append(children[i].name)
-            if (i < children.size - 1) {
+        for ((pos, element) in path.withIndex()) {
+            if (pos == 0) {
+                continue
+            }
+            sb.append(element)
+            if (pos < path.size - 1) {
                 sb.append(" -> ")
             }
         }
-        return sb.toString()
+        stringCollection.addStringPath(sb.toString())
     }
 }

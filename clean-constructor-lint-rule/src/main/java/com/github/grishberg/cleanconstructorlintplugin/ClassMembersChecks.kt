@@ -149,6 +149,13 @@ class ClassMembersChecks(
         return context.uastContext.getClass(clazz)
     }
 
+    fun extractRawTypeFromConstructor(constructorMethod: UMethod): String {
+        val psiClass = constructorMethod.containingClass ?: return ""
+        val uClass = context.uastContext.getClass(psiClass)
+        val rawName = uClass.qualifiedName?.let { extractRawType(it) }
+        return rawName ?: ""
+    }
+
     companion object {
         private val ACCEPTED_METHODS = listOf("this", "super")
     }
