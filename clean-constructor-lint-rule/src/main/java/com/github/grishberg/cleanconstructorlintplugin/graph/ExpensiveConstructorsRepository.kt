@@ -1,7 +1,5 @@
 package com.github.grishberg.cleanconstructorlintplugin.graph
 
-import java.lang.IllegalStateException
-
 data class ExpensiveClassContainer(val className: String, val diGraph: DependencyGraph) {
     override fun equals(other: Any?): Boolean {
         if (other !is ExpensiveClassContainer) {
@@ -15,6 +13,7 @@ data class ExpensiveClassContainer(val className: String, val diGraph: Dependenc
     }
 }
 
+@Deprecated(message = "dont use it")
 class ExpensiveConstructorsRepository {
     private val classes = mutableSetOf<ExpensiveClassContainer>()
 
