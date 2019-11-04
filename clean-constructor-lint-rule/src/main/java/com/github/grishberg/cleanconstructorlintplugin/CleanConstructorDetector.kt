@@ -118,14 +118,20 @@ class CleanConstructorDetector : Detector(), UastScanner {
             shouldReport: Boolean = false
         ): Boolean {
             // check each injected class in parameters.
-            return constructor.uastParameters.any { uParameter ->
-                isExpensiveConstructorParameter(
-                    constructor,
-                    parentDiGraph,
-                    shouldReport,
-                    uParameter
-                )
+            var hasExpensiveConstructor = false
+            // check each injected class in parameters.
+            for (constructorsParam in constructor.uastParameters) {
+                if (isExpensiveConstructorParameter(
+                        constructor,
+                        parentDiGraph,
+                        shouldReport,
+                        constructorsParam
+                    )
+                ) {
+                    hasExpensiveConstructor = true
+                }
             }
+            return hasExpensiveConstructor
         }
 
         private fun isExpensiveConstructorParameter(
