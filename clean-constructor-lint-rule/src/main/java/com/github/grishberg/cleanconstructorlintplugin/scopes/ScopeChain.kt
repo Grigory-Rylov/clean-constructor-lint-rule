@@ -14,7 +14,10 @@ class ScopeChain(
      * Returns {@code true} if {@param parentScope} is created earlier or at the same time
      * as {@param dependencyScope}.
      */
-    fun scopeLevel(annotation: String): Int {
+    fun scopeLevel(annotation: String?): Int {
+        if (annotation == null) {
+            return -1
+        }
         return scopes.indexOf(annotation)
     }
 }

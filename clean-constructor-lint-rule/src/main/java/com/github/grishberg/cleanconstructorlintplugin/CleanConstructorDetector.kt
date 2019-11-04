@@ -140,12 +140,13 @@ class CleanConstructorDetector : Detector(), UastScanner {
             val uClass = parameterWrapper.uClass ?: return false
             val injectedClassName: String = uClass.qualifiedName ?: return false
 
-            val annotations = uClass.annotations
-            val diGraph = parentDiGraph ?: DependencyNode(scopes,
+            val parameterAnnotations = uClass.annotations
+            val diGraph = parentDiGraph ?: DependencyNode(
+                scopes,
                 membersChecks.extractRawTypeFromConstructor(constructor),
-                annotations
+                parameterAnnotations
             )
-            val parameterNode = DependencyNode(scopes, injectedClassName, annotations)
+            val parameterNode = DependencyNode(scopes, injectedClassName, parameterAnnotations)
 
             if (diGraph.hasElement(parameterNode)) {
                 return false
@@ -176,7 +177,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
             for (method in uClass.methods) {
                 if (checkInjectedClassMethod(
                         injectedClassName,
-                        annotations,
+                        parameterAnnotations,
                         constructorsParam,
                         method,
                         diGraph,

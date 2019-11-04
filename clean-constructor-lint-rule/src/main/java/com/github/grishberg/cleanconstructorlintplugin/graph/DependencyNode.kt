@@ -74,11 +74,8 @@ class DependencyNode(
 
     /**
      * return {@code} true when {@param parameterNode} scope level is greater
-     * then current node scope level
+     * then current node scope level.
      */
-    fun isWrongScope(parameterNode: DependencyNode): Boolean {
-        if (scopes.isDifferentScopes(annotaions, parameterNode.annotaions)) {
-            return true
-        }
-    }
+    fun isWrongScope(parameterNode: DependencyNode) =
+        !scopes.isAllowedScope(annotaions, parameterNode.annotaions)
 }
