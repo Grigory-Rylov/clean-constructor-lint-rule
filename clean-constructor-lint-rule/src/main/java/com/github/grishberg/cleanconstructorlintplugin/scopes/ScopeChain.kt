@@ -8,7 +8,14 @@ class ScopeChain(
     private val name: String,
     private val scopes: List<String>
 ) {
-    fun hasScope(name: String): Boolean = scopes.contains(name)
+    fun hasScope(name: String): Boolean {
+        for (annotation in scopes) {
+            if (annotation.contains(name)) {
+                return true
+            }
+        }
+        return false
+    }
 
     /**
      * Returns {@code true} if {@param parentScope} is created earlier or at the same time

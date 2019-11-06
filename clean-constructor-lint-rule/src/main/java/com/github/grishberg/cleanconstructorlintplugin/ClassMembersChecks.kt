@@ -2,6 +2,7 @@ package com.github.grishberg.cleanconstructorlintplugin
 
 import com.android.tools.lint.detector.api.JavaContext
 import com.android.tools.lint.detector.api.TypeEvaluator
+import com.github.grishberg.cleanconstructorlintplugin.ignore.BlackListTypes
 import com.github.grishberg.cleanconstructorlintplugin.ignore.IgnoredSupertypes
 import com.github.grishberg.cleanconstructorlintplugin.ignore.IgnoredTypes
 import com.intellij.psi.PsiModifier
@@ -40,6 +41,61 @@ class ClassMembersChecks(
         }
         for (subtype in uClass.superTypes) {
             if (isAllowedType(subtype, expression.name)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    fun isTypeOfExpressionInBlackList(expression: UMethod): Boolean {
+        val psiClass = expression.containingClass ?: return false
+        val uClass = context.uastContext.getClass(psiClass)
+        val typeName = uClass.qualifiedName
+
+        val allowedMethodsOfClass = BlackListTypes.TYPES[typeName]
+        if (allowedMethodsOfClass != null) {
+            if (allowedMethodsOfClass.isEmpty() || allowedMethodsOfClass.contains(expression.name)) {
+                return true
+            }
+        }
+        for (subtype in uClass.superTypes) {
+            if (isInBlackList(subtype, expression.name)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun isInBlackList(type: PsiType, methodName: String): Boolean {
+        val typeName = extractRawType(type.getCanonicalText(false))
+        if (isMethodForTypeInBlackList(typeName, methodName)) {
+            return true
+        }
+        for (subtype in type.superTypes) {
+            if (isMethodInBlackList(subtype, methodName)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun isMethodInBlackList(type: PsiType, methodName: String): Boolean {
+        val typeName = extractRawType(type.getCanonicalText(false))
+        if (isMethodForTypeInBlackList(typeName, methodName)) {
+            return true
+        }
+        for (subtype in type.superTypes) {
+            if (isMethodInBlackList(subtype, methodName)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun isMethodForTypeInBlackList(typeName: String, methodName: String): Boolean {
+        val allowedMethodsOfClass = BlackListTypes.TYPES[typeName]
+        if (allowedMethodsOfClass != null) {
+            if (allowedMethodsOfClass.isEmpty() || allowedMethodsOfClass.contains(methodName)) {
                 return true
             }
         }
@@ -149,10 +205,19 @@ class ClassMembersChecks(
         return context.uastContext.getClass(clazz)
     }
 
+    fun extractAnnotationsFromMethod(method: UMethod): List<UAnnotation> {
+        val uClass = extractUClassFromMethod(method)
+        return uClass?.annotations ?: emptyList()
+    }
+
+    fun extractUClassFromMethod(constructorMethod: UMethod): UClass? {
+        val psiClass = constructorMethod.containingClass ?: return null
+        return context.uastContext.getClass(psiClass)
+    }
+
     fun extractRawTypeFromConstructor(constructorMethod: UMethod): String {
-        val psiClass = constructorMethod.containingClass ?: return ""
-        val uClass = context.uastContext.getClass(psiClass)
-        val rawName = uClass.qualifiedName?.let { extractRawType(it) }
+        val uClass = extractUClassFromMethod(constructorMethod)
+        val rawName = uClass?.qualifiedName?.let { extractRawType(it) }
         return rawName ?: ""
     }
 

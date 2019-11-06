@@ -83,7 +83,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
          * Use this method only for constructors checking.
          */
         override fun visitMethod(node: UMethod) {
-            if (!node.isConstructor) {
+            if (!isConstructor(node)) {
                 return
             }
             if (node.uastParent is UClass && membersChecks.isIgnoredSupertype(
@@ -94,6 +94,13 @@ class CleanConstructorDetector : Detector(), UastScanner {
                 return
             }
             checkConstructor(node)
+        }
+
+        private fun isConstructor(node: UMethod): Boolean {
+            if (node.isConstructor) {
+                return true
+            }
+            return node.name == membersChecks.extractUClassFromMethod(node)?.name
         }
 
         private fun checkConstructor(constructorMethod: UMethod) {
@@ -150,7 +157,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
             val diGraph = parentDiGraph ?: DependencyNode(
                 scopes,
                 membersChecks.extractRawTypeFromConstructor(constructor),
-                parameterAnnotations
+                membersChecks.extractAnnotationsFromMethod(constructor)
             )
             val parameterNode = DependencyNode(scopes, injectedClassName, parameterAnnotations)
 

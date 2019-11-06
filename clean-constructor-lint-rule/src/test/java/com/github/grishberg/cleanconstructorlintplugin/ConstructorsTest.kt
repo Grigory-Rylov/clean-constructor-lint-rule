@@ -1,6 +1,7 @@
 package com.github.grishberg.cleanconstructorlintplugin
 
 import com.android.tools.lint.checks.infrastructure.LintDetectorTest.java
+import com.android.tools.lint.checks.infrastructure.TestFiles.kotlin
 import com.android.tools.lint.checks.infrastructure.TestLintTask
 import org.apache.commons.io.IOUtils
 import org.junit.Test

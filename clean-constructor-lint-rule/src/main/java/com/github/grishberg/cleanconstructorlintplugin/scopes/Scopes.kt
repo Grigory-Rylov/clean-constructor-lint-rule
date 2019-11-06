@@ -36,11 +36,14 @@ class Scopes {
 
         for (a in rootNodeAnnotations) {
             val rootNodeScopeChain = chainByScopeAnnotation(a) ?: continue
-            val rootNodeLevel = rootNodeScopeChain.scopeLevel(a.qualifiedName)
+            val rootNodeLevel = rootNodeScopeChain.scopeLevel(simpleName(a))
 
             for (b in injectedNodeAnnotations) {
                 val injectedNodeScopeChain = chainByScopeAnnotation(b) ?: continue
-                return rootNodeLevel >= injectedNodeScopeChain.scopeLevel(b.qualifiedName)
+                if (rootNodeScopeChain != injectedNodeScopeChain) {
+                    return false
+                }
+                return rootNodeLevel >= injectedNodeScopeChain.scopeLevel(simpleName(b))
             }
         }
         return false
@@ -48,12 +51,17 @@ class Scopes {
 
     private fun chainByScopeAnnotation(annotation: UAnnotation): ScopeChain? {
         for (chain in SCOPES) {
-            val name = annotation.qualifiedName ?: continue
+            val name = simpleName(annotation) ?: continue
             if (chain.hasScope(name)) {
                 return chain
             }
         }
         return null
+    }
+
+    private fun simpleName(annotation: UAnnotation): String? {
+        val name = annotation.qualifiedName ?: return null
+        return name.substringAfterLast('.')
     }
 
     companion object {
