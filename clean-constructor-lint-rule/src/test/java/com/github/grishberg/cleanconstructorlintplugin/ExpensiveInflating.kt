@@ -6,6 +6,7 @@ import com.github.grishberg.cleanconstructorlintplugin.common.Common
 import org.junit.Test
 
 class ExpensiveInflating {
+
     private val annotations = LintDetectorTest.kotlin(
         """
             package foo
@@ -29,18 +30,18 @@ class ExpensiveInflating {
         import android.view.View
         import android.view.ViewGroup
         import android.widget.FrameLayout
+        import foo.myapplication.R
 
         import javax.inject.Inject
         
         
         class CardsController @Inject constructor(
-            layoutId: Int,
             inflater: LayoutInflater
         ) {
             private val cardsView: View
 
             init {
-                cardsView = inflater.inflate(layoutId, null, false)
+                cardsView = inflater.inflate(R.layout.main_layout, null, false)
             }
 }"""
     ).indented()
@@ -52,17 +53,17 @@ class ExpensiveInflating {
         import android.view.View
         import android.view.ViewGroup
         import android.widget.FrameLayout
+        import foo.myapplication.R
 
         import javax.inject.Inject
 
         @MainScreenScope
         class MainButtonsController @Inject constructor(   
-            layoutId: Int,
             inflater: LayoutInflater
         ){
             private val view: View
              init {
-                view = inflater.inflate(layoutId, null, false)
+                view = inflater.inflate(R.layout.main_layout, null, false)
             }
         }"""
     ).indented()
@@ -99,10 +100,10 @@ src/foo/MainScreenController.kt:7: Warning: Constructor with @Inject annotation 
         private val cardsController:CardsController
                     ~~~~~~~~~~~~~~~
 src/foo/CardsController.kt:17: Warning: Constructor has expensive method calls: inflate [ExpensiveConstructor]
-                cardsView = inflater.inflate(layoutId, null, false)
+                cardsView = inflater.inflate(R.layout.main_layout, null, false)
                                      ~~~~~~~
 src/foo/MainButtonsController.kt:16: Warning: Constructor has expensive method calls: inflate [ExpensiveConstructor]
-        view = inflater.inflate(layoutId, null, false)
+        view = inflater.inflate(R.layout.main_layout, null, false)
                         ~~~~~~~
 0 errors, 3 warnings
                 """

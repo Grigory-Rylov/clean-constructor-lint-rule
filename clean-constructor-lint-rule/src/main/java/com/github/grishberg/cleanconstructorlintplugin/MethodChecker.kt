@@ -209,8 +209,14 @@ class MethodChecker(
             if (!expr.isMethodCall() && !expr.isConstructorCall()) {
                 return false
             }
-            val methodCall = expr.resolveToUElement() as? UMethod ?: return false
-            return isAvailableMethod(methodCall)
+            val uElement = expr.resolveToUElement()
+            if (uElement is UMethod) {
+                val methodCall = uElement as? UMethod ?: return false
+                return isAvailableMethod(methodCall)
+            }
+            val className = expr.receiver?.getExpressionType() ?: return false
+            val methodName = expr.methodIdentifier?.name ?: return false
+            return membersChecks.isAllowedType(className, methodName)
         }
 
         private fun isAvailablePolyadicExpression(expr: UPolyadicExpression): Boolean {

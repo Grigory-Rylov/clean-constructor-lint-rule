@@ -156,7 +156,7 @@ class ClassMembersChecks(
         return false
     }
 
-    private fun isAllowedType(type: PsiType, methodName: String): Boolean {
+    fun isAllowedType(type: PsiType, methodName: String): Boolean {
         val typeName = extractRawType(type.getCanonicalText(false))
         if (isAllowedMethodForType(typeName, methodName)) {
             return true

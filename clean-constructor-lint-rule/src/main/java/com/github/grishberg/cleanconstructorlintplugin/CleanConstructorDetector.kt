@@ -249,6 +249,20 @@ class CleanConstructorDetector : Detector(), UastScanner {
                 "Constructor with @Inject annotation injected object that has expensive constructor: $sb"
             )
         }
+
+        private fun reportWrongScopeParameter(
+            constructor: UMethod,
+            param: UParameter,
+            diGraph: DependencyNode
+        ) {
+            val sb = InjectedIssueString()
+            diGraph.printPath(sb)
+            context.report(
+                WRONG_SCOPE_ISSUE, constructor,
+                context.getNameLocation(param.toUElement()!!),
+                "Constructor with @Inject annotation injected object that has different scope: $sb"
+            )
+        }
     }
 
     companion object {
@@ -289,6 +303,28 @@ class CleanConstructorDetector : Detector(), UastScanner {
             Category.PERFORMANCE,
             9,
             Severity.WARNING,
+            Implementation(
+                CleanConstructorDetector::class.java,
+                Scope.JAVA_FILE_SCOPE
+            )
+        )
+
+        val WRONG_SCOPE_ISSUE = Issue.create(
+            // ID: used in @SuppressLint warnings etc
+            "InjectedWrongScopeClass",
+
+            // Title -- shown in the IDE's preference dialog, as category headers in the
+            // Analysis results window, etc
+            "Injected class with wrong scope",
+
+            // Full explanation of the issue; you can use some markdown markup such as
+            // `monospace`, *italic*, and **bold**.
+            "This check highlights injecting class that must be created in scope, that happens " +
+                    "later than current class scope. " +
+                    "You should use Lazy wrapper for this cases.",
+            Category.PERFORMANCE,
+            9,
+            Severity.ERROR,
             Implementation(
                 CleanConstructorDetector::class.java,
                 Scope.JAVA_FILE_SCOPE
