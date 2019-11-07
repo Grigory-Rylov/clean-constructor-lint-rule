@@ -1,7 +1,12 @@
 package com.github.grishberg.cleanconstructorlintplugin.graph
 
+import com.github.grishberg.cleanconstructorlintplugin.scopes.Scopes
+import org.jetbrains.uast.UAnnotation
+
 class DependencyNode(
+    val scopes: Scopes,
     val name: String,
+    val annotaions: List<UAnnotation>,
     parentNode: DependencyNode? = null
 ) {
     private val path = LinkedHashSet<String>()
@@ -66,4 +71,11 @@ class DependencyNode(
         }
         stringCollection.addStringPath(sb.toString())
     }
+
+    /**
+     * return {@code} true when {@param parameterNode} scope level is greater
+     * then current node scope level.
+     */
+    fun isWrongScope(parameterNode: DependencyNode) =
+        !scopes.isAllowedScope(annotaions, parameterNode.annotaions)
 }

@@ -19,7 +19,7 @@ class MethodChecker(
         val containingUClass = targetMethodCall.getContainingUClass()
         if (containingUClass != null && targetMethodCall.receiver == null) {
             // in this case is called this.someMethod()
-            return checkMethodOfClass(containingUClass)
+            return checkMethodOfClass()
         }
         // ignore if this is abstract method
         val uElement = targetMethodCall.resolveToUElement()
@@ -28,16 +28,12 @@ class MethodChecker(
                 return false
             }
         }
-        val className = targetMethodCall.receiver?.getExpressionType()?.getCanonicalText(false) ?: return true
-        val clazz = context.evaluator.findClass(className) ?: return true
-        val uClass = context.uastContext.getClass(clazz)
-        return checkMethodOfClass(uClass)
+        return checkMethodOfClass()
     }
 
-    private fun checkMethodOfClass(uClass: UClass): Boolean {
+    private fun checkMethodOfClass(): Boolean {
         val methodVisitor = MethodVisitor(membersChecks, targetMethodCall)
-        uClass.accept(methodVisitor)
-        return methodVisitor.isExpensive
+        return !methodVisitor.isAvailableExpression(targetMethodCall)
     }
 
     private class MethodVisitor(
@@ -78,6 +74,9 @@ class MethodChecker(
             val uastParent = node.uastParent
             if (uastParent is UClass) {
                 if (uastParent.isInterface || membersChecks.isAbstractClass(uastParent)) {
+                    if (membersChecks.isTypeOfExpressionInBlackList(node)) {
+                        return false
+                    }
                     // TODO(grishberg) : check methods of all implementations.
                     return true
                 }
@@ -139,7 +138,7 @@ class MethodChecker(
             return true
         }
 
-        private fun isAvailableExpression(expr: UExpression?): Boolean {
+        fun isAvailableExpression(expr: UExpression?): Boolean {
             if (expr == null) {
                 return true
             }
@@ -159,7 +158,9 @@ class MethodChecker(
                     val returnExpression = expr.returnExpression ?: return true
                     return isAvailableExpression(returnExpression)
                 }
-                is UQualifiedReferenceExpression -> return isAvailableQualifiedReferenceExpression(expr)
+                is UQualifiedReferenceExpression -> return isAvailableQualifiedReferenceExpression(
+                    expr
+                )
                 is UDeclarationsExpression -> return isAvailableDeclarationsExpression(expr)
                 is UForExpression -> return isAvailableForExpression(expr)
                 is UForEachExpression -> return isAvailableForEachExpression(expr)
@@ -208,8 +209,14 @@ class MethodChecker(
             if (!expr.isMethodCall() && !expr.isConstructorCall()) {
                 return false
             }
-            val methodCall = expr.resolveToUElement() as? UMethod ?: return false
-            return isAvailableMethod(methodCall)
+            val uElement = expr.resolveToUElement()
+            if (uElement is UMethod) {
+                val methodCall = uElement as? UMethod ?: return false
+                return isAvailableMethod(methodCall)
+            }
+            val className = expr.receiver?.getExpressionType() ?: return false
+            val methodName = expr.methodIdentifier?.name ?: return false
+            return membersChecks.isAllowedType(className, methodName)
         }
 
         private fun isAvailablePolyadicExpression(expr: UPolyadicExpression): Boolean {

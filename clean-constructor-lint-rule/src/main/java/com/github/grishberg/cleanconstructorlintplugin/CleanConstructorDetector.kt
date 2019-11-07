@@ -5,6 +5,7 @@ import com.android.tools.lint.detector.api.*
 import com.android.tools.lint.detector.api.Detector.UastScanner
 import com.github.grishberg.cleanconstructorlintplugin.graph.DependencyNode
 import com.github.grishberg.cleanconstructorlintplugin.graph.InjectedIssueString
+import com.github.grishberg.cleanconstructorlintplugin.scopes.Scopes
 import org.jetbrains.uast.*
 
 
@@ -23,6 +24,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
         private val context: JavaContext,
         private val membersChecks: ClassMembersChecks
     ) : UElementHandler() {
+        private val scopes = Scopes()
 
         /**
          * TODO: Use this method only for field checking.
@@ -61,7 +63,11 @@ class CleanConstructorDetector : Detector(), UastScanner {
             }
         }
 
-        private fun checkReferenceConstructors(callerClass: UClass, constructor: UMethod, call: UCallExpression) {
+        private fun checkReferenceConstructors(
+            callerClass: UClass,
+            constructor: UMethod,
+            call: UCallExpression
+        ) {
             val constructorVisitor = ConstructorsMethodsVisitor(context, membersChecks)
             constructor.accept(constructorVisitor)
             if (constructorVisitor.isExpensiveConstructor()) {
@@ -77,13 +83,24 @@ class CleanConstructorDetector : Detector(), UastScanner {
          * Use this method only for constructors checking.
          */
         override fun visitMethod(node: UMethod) {
-            if (!node.isConstructor) {
+            if (!isConstructor(node)) {
                 return
             }
-            if (node.uastParent is UClass && membersChecks.isIgnoredSupertype(node.uastParent as UClass, context)) {
+            if (node.uastParent is UClass && membersChecks.isIgnoredSupertype(
+                    node.uastParent as UClass,
+                    context
+                )
+            ) {
                 return
             }
             checkConstructor(node)
+        }
+
+        private fun isConstructor(node: UMethod): Boolean {
+            if (node.isConstructor) {
+                return true
+            }
+            return node.name == membersChecks.extractUClassFromMethod(node)?.name
         }
 
         private fun checkConstructor(constructorMethod: UMethod) {
@@ -107,10 +124,17 @@ class CleanConstructorDetector : Detector(), UastScanner {
             parentDiGraph: DependencyNode?,
             shouldReport: Boolean = false
         ): Boolean {
+            // check each injected class in parameters.
             var hasExpensiveConstructor = false
             // check each injected class in parameters.
             for (constructorsParam in constructor.uastParameters) {
-                if (isExpensiveConstructorParameter(constructor, parentDiGraph, shouldReport, constructorsParam)) {
+                if (isExpensiveConstructorParameter(
+                        constructor,
+                        parentDiGraph,
+                        shouldReport,
+                        constructorsParam
+                    )
+                ) {
                     hasExpensiveConstructor = true
                 }
             }
@@ -129,8 +153,13 @@ class CleanConstructorDetector : Detector(), UastScanner {
             val uClass = parameterWrapper.uClass ?: return false
             val injectedClassName: String = uClass.qualifiedName ?: return false
 
-            val diGraph = parentDiGraph ?: DependencyNode(membersChecks.extractRawTypeFromConstructor(constructor))
-            val parameterNode = DependencyNode(injectedClassName)
+            val parameterAnnotations = uClass.annotations
+            val diGraph = parentDiGraph ?: DependencyNode(
+                scopes,
+                membersChecks.extractRawTypeFromConstructor(constructor),
+                membersChecks.extractAnnotationsFromMethod(constructor)
+            )
+            val parameterNode = DependencyNode(scopes, injectedClassName, parameterAnnotations)
 
             if (diGraph.hasElement(parameterNode)) {
                 return false
@@ -142,7 +171,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
                 }
                 val classVisitor = ConstructorsMethodsVisitor(context, membersChecks)
                 parameterClassMethod.accept(classVisitor)
-                if (classVisitor.isExpensiveConstructor()) {
+                if (classVisitor.isExpensiveConstructor() && diGraph.isWrongScope(parameterNode)) {
                     diGraph.addChild(parameterNode)
 
                     if (shouldReport) {
@@ -161,6 +190,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
             for (method in uClass.methods) {
                 if (checkInjectedClassMethod(
                         injectedClassName,
+                        parameterAnnotations,
                         constructorsParam,
                         method,
                         diGraph,
@@ -175,6 +205,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
 
         private fun checkInjectedClassMethod(
             injectedClassName: String,
+            annotations: List<UAnnotation>,
             constructorsParam: UParameter,
             constructor: UMethod,
             parentGraph: DependencyNode,
@@ -187,7 +218,7 @@ class CleanConstructorDetector : Detector(), UastScanner {
                 return false
             }
             // check injected parameters.
-            val subclassGraph = DependencyNode(injectedClassName, parentGraph)
+            val subclassGraph = DependencyNode(scopes, injectedClassName, annotations, parentGraph)
             if (checkArgsHasExpensiveConstructor(constructor, subclassGraph)) {
                 parentGraph.addChild(subclassGraph)
                 val constructorParamAsUElement = constructorsParam.toUElement()
@@ -216,6 +247,20 @@ class CleanConstructorDetector : Detector(), UastScanner {
                 INJECT_ISSUE, constructor,
                 context.getNameLocation(param.toUElement()!!),
                 "Constructor with @Inject annotation injected object that has expensive constructor: $sb"
+            )
+        }
+
+        private fun reportWrongScopeParameter(
+            constructor: UMethod,
+            param: UParameter,
+            diGraph: DependencyNode
+        ) {
+            val sb = InjectedIssueString()
+            diGraph.printPath(sb)
+            context.report(
+                WRONG_SCOPE_ISSUE, constructor,
+                context.getNameLocation(param.toUElement()!!),
+                "Constructor with @Inject annotation injected object that has different scope: $sb"
             )
         }
     }
@@ -258,6 +303,28 @@ class CleanConstructorDetector : Detector(), UastScanner {
             Category.PERFORMANCE,
             9,
             Severity.WARNING,
+            Implementation(
+                CleanConstructorDetector::class.java,
+                Scope.JAVA_FILE_SCOPE
+            )
+        )
+
+        val WRONG_SCOPE_ISSUE = Issue.create(
+            // ID: used in @SuppressLint warnings etc
+            "InjectedWrongScopeClass",
+
+            // Title -- shown in the IDE's preference dialog, as category headers in the
+            // Analysis results window, etc
+            "Injected class with wrong scope",
+
+            // Full explanation of the issue; you can use some markdown markup such as
+            // `monospace`, *italic*, and **bold**.
+            "This check highlights injecting class that must be created in scope, that happens " +
+                    "later than current class scope. " +
+                    "You should use Lazy wrapper for this cases.",
+            Category.PERFORMANCE,
+            9,
+            Severity.ERROR,
             Implementation(
                 CleanConstructorDetector::class.java,
                 Scope.JAVA_FILE_SCOPE

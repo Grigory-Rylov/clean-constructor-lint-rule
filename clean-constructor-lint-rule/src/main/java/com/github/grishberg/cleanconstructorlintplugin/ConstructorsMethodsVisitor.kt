@@ -52,7 +52,8 @@ class ConstructorsMethodsVisitor(
             return false
         }
         if (node.isMethodCall()) {
-            val methodName = node.methodName
+            val methodName =
+                if (node.methodName != null) node.methodName else node.methodIdentifier?.name
             if (methodName != null && !membersChecks.isAllowedIdentifier(methodName)) {
                 val methodChecker = MethodChecker(context, membersChecks, node)
                 if (!methodChecker.isExpensive()) {
@@ -75,7 +76,10 @@ class ConstructorsMethodsVisitor(
                 if (!method.isConstructor && !membersChecks.isAllowedMethod(method)) {
                     isExpensiveConstructor = true
                     if (!membersChecks.isPrivateClass(uClass)) {
-                        strategy.report(node, "Constructor has expensive method calls: ${method.name}")
+                        strategy.report(
+                            node,
+                            "Constructor has expensive method calls: ${method.name}"
+                        )
                     }
                 }
             }

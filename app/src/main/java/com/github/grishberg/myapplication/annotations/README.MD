@@ -1,0 +1,1 @@
+There is two main scope: list screen and details screen
