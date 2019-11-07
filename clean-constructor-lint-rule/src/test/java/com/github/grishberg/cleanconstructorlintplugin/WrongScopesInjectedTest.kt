@@ -75,14 +75,14 @@ class WrongScopesInjectedTest {
                 mainScreenButtonsController, cardsController,
                 mainScreenController
             )
-            .issues(CleanConstructorDetector.INJECT_ISSUE)
+            .issues(WrongScopeConstructorDetector.WRONG_SCOPE_ISSUE)
             .run()
             .expect(
                 """
-src/foo/MainScreenController.java:9: Warning: Constructor with @Inject annotation injected object that has expensive constructor: foo.CardsController [InjectedExpensiveConstructor]
+src/foo/MainScreenController.java:9: Error: Constructor with @Inject annotation injected object that has different scope: foo.CardsController [InjectedWrongScopeClass]
         CardsController cardsController
                         ~~~~~~~~~~~~~~~
-0 errors, 1 warnings         
+1 errors, 0 warnings         
 """.trimIndent()
             )
     }

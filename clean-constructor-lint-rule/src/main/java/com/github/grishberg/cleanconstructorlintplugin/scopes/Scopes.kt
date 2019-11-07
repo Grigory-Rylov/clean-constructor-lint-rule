@@ -5,20 +5,13 @@ import org.jetbrains.uast.UAnnotation
 /**
  * Order of scopes.
  */
-private const val LINT_SCOPES_ENABLED_KEY = "LINT_SCOPES_ENABLED"
 private const val LINT_SCOPES_VALUE_KEY_ = "LINT_SCOPES"
 private const val TRUE_VALUE = "true"
 
 class Scopes {
-    private val scopesEnabled: Boolean
-
     init {
-        val scopesState = System.getenv(LINT_SCOPES_ENABLED_KEY)
-        scopesEnabled = if (scopesState == null) {
-            true
-        } else {
-            TRUE_VALUE == scopesState
-        }
+        val scopesValue = System.getenv(LINT_SCOPES_VALUE_KEY_)
+        //TODO parse scopesValue json.
     }
 
     /**
@@ -30,9 +23,6 @@ class Scopes {
         rootNodeAnnotations: List<UAnnotation>,
         injectedNodeAnnotations: List<UAnnotation>
     ): Boolean {
-        if (!scopesEnabled) {
-            return false
-        }
 
         for (a in rootNodeAnnotations) {
             val rootNodeScopeChain = chainByScopeAnnotation(a) ?: continue
@@ -46,7 +36,7 @@ class Scopes {
                 return rootNodeLevel >= injectedNodeScopeChain.scopeLevel(simpleName(b))
             }
         }
-        return false
+        return true
     }
 
     private fun chainByScopeAnnotation(annotation: UAnnotation): ScopeChain? {

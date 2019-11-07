@@ -6,23 +6,6 @@ import com.github.grishberg.cleanconstructorlintplugin.common.Common
 import org.junit.Test
 
 class ExpensiveInflating {
-
-    private val annotations = LintDetectorTest.kotlin(
-        """
-            package foo
-
-            import javax.inject.Scope
-
-            @Scope
-            @Retention(AnnotationRetention.SOURCE)
-            annotation class MainScreenScope
-
-            @Scope  
-            @Retention(AnnotationRetention.SOURCE)
-            annotation class MainScreenCardsScope
-
-            """
-    ).indented()
     private val cardsController = LintDetectorTest.kotlin(
         """
         package foo
@@ -34,7 +17,7 @@ class ExpensiveInflating {
 
         import javax.inject.Inject
         
-        
+        @MainScreenCardsScope
         class CardsController @Inject constructor(
             inflater: LayoutInflater
         ) {
@@ -88,7 +71,7 @@ class ExpensiveInflating {
     fun ignoreMethodReferenceInAddListener() {
         TestLintTask.lint()
             .files(
-                Common.injectAnnotation, annotations,
+                Common.injectAnnotation,
                 cardsController, mainScreenButtonsController,
                 mainScreenController
             )
@@ -96,6 +79,9 @@ class ExpensiveInflating {
             .run()
             .expect(
                 """
+src/foo/MainScreenController.kt:6: Warning: Constructor with @Inject annotation injected object that has expensive constructor: foo.MainButtonsController [InjectedExpensiveConstructor]
+        private val mainButtonsController: MainButtonsController,
+                    ~~~~~~~~~~~~~~~~~~~~~
 src/foo/MainScreenController.kt:7: Warning: Constructor with @Inject annotation injected object that has expensive constructor: foo.CardsController [InjectedExpensiveConstructor]
         private val cardsController:CardsController
                     ~~~~~~~~~~~~~~~
@@ -105,7 +91,7 @@ src/foo/CardsController.kt:17: Warning: Constructor has expensive method calls: 
 src/foo/MainButtonsController.kt:16: Warning: Constructor has expensive method calls: inflate [ExpensiveConstructor]
         view = inflater.inflate(R.layout.main_layout, null, false)
                         ~~~~~~~
-0 errors, 3 warnings
+0 errors, 4 warnings
                 """
                     .trimMargin()
             )

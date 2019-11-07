@@ -22,7 +22,7 @@ android {
         }
     }
     lintOptions{
-        check "InjectedExpensiveConstructor", "ExpensiveConstructor"
+        check "InjectedWrongScopeClass"
     }
     kapt {
         generateStubs = true
